@@ -1,0 +1,34 @@
+{
+	"version": 1,
+	"slots": {
+		"eyebrow": { "type": "string", "required": true, "maxLength": 60 },
+		"title": { "type": "string", "required": true, "maxLength": 80 },
+		"subtitle": { "type": "string", "required": true, "maxLength": 200 },
+		"targetName": { "type": "string", "required": true, "maxLength": 80 },
+		"sections": {
+			"type": "array",
+			"required": true,
+			"minItems": 2,
+			"maxItems": 5,
+			"items": {
+				"type": "object",
+				"shape": {
+					"heading": { "type": "string", "required": true, "maxLength": 80 },
+					"body": { "type": "string", "required": true }
+				}
+			}
+		},
+		"cta": {
+			"type": "object",
+			"required": true,
+			"shape": {
+				"heading": { "type": "string", "required": true, "maxLength": 80 },
+				"body": { "type": "string", "required": true, "maxLength": 300 }
+			}
+		}
+	},
+	"input": {
+		"targetCompany": { "type": "string", "required": true },
+		"contactName": { "type": "string", "required": false }
+	}
+}

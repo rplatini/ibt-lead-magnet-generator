@@ -1,0 +1,166 @@
+import type { SlotDef, SlotSchema } from "../types";
+
+interface Props {
+	schema: SlotSchema;
+	value: Record<string, unknown>;
+	onChange: (next: Record<string, unknown>) => void;
+	onSubmit: () => void;
+	submitting?: boolean;
+	submitLabel?: string;
+}
+
+export default function SlotForm({
+	schema,
+	value,
+	onChange,
+	onSubmit,
+	submitting,
+	submitLabel = "Generate",
+}: Props) {
+	const inputDefs = schema.input ?? {};
+	const entries = Object.entries(inputDefs);
+
+	const handleChange = (key: string, next: unknown) => {
+		onChange({ ...value, [key]: next });
+	};
+
+	return (
+		<form
+			onSubmit={(e) => {
+				e.preventDefault();
+				onSubmit();
+			}}
+			className="space-y-4"
+		>
+			{entries.length === 0 && (
+				<div className="text-sm text-slate-500">
+					This template has no input fields.
+				</div>
+			)}
+			{entries.map(([key, def]) => (
+				<Field
+					key={key}
+					fieldKey={key}
+					def={def}
+					value={value[key]}
+					onChange={(v) => handleChange(key, v)}
+				/>
+			))}
+			<button
+				type="submit"
+				disabled={submitting}
+				className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50"
+			>
+				{submitting ? "Working…" : submitLabel}
+			</button>
+		</form>
+	);
+}
+
+function Field({
+	fieldKey,
+	def,
+	value,
+	onChange,
+}: {
+	fieldKey: string;
+	def: SlotDef;
+	value: unknown;
+	onChange: (next: unknown) => void;
+}) {
+	const label = (
+		<label
+			htmlFor={`slot-${fieldKey}`}
+			className="block text-sm font-medium text-slate-700"
+		>
+			{fieldKey}
+			{def.required && <span className="text-red-500 ml-0.5">*</span>}
+		</label>
+	);
+	const hint = def.hint ? (
+		<p className="text-xs text-slate-500 mt-0.5">{def.hint}</p>
+	) : null;
+
+	if (def.type === "string" || def.type === "html") {
+		const useTextarea = (def.maxLength ?? 0) > 200 || def.type === "html";
+		return (
+			<div>
+				{label}
+				{useTextarea ? (
+					<textarea
+						id={`slot-${fieldKey}`}
+						value={(value as string) ?? ""}
+						onChange={(e) => onChange(e.target.value)}
+						rows={4}
+						className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+					/>
+				) : (
+					<input
+						id={`slot-${fieldKey}`}
+						type="text"
+						value={(value as string) ?? ""}
+						onChange={(e) => onChange(e.target.value)}
+						className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+					/>
+				)}
+				{hint}
+			</div>
+		);
+	}
+	if (def.type === "number") {
+		return (
+			<div>
+				{label}
+				<input
+					id={`slot-${fieldKey}`}
+					type="number"
+					value={value === undefined || value === null ? "" : String(value)}
+					onChange={(e) =>
+						onChange(e.target.value === "" ? undefined : Number(e.target.value))
+					}
+					className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+				/>
+				{hint}
+			</div>
+		);
+	}
+	if (def.type === "boolean") {
+		return (
+			<div className="flex items-start gap-2">
+				<input
+					id={`slot-${fieldKey}`}
+					type="checkbox"
+					checked={Boolean(value)}
+					onChange={(e) => onChange(e.target.checked)}
+					className="mt-1"
+				/>
+				<div>
+					{label}
+					{hint}
+				</div>
+			</div>
+		);
+	}
+	return (
+		<div>
+			{label}
+			<textarea
+				id={`slot-${fieldKey}`}
+				value={value === undefined ? "" : JSON.stringify(value, null, 2)}
+				onChange={(e) => {
+					try {
+						onChange(JSON.parse(e.target.value));
+					} catch {
+						// allow invalid JSON during editing
+					}
+				}}
+				rows={6}
+				className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-300"
+			/>
+			{hint}
+			<p className="text-xs text-amber-600 mt-1">
+				Complex field — edit as JSON.
+			</p>
+		</div>
+	);
+}

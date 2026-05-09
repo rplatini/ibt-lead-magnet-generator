@@ -1,0 +1,22 @@
+node_modules
+.env
+.env.local
+dist
+client/dist
+
+# Generated artifacts (keep .gitkeep so the dir exists)
+output/*
+!output/.gitkeep
+
+# Templates produced from a brandbook are conceptually outputs; we don't
+# track them by default. _example is checked in as the canonical model.
+templates/*
+!templates/.gitkeep
+!templates/_example
+!templates/_example/**
+
+# OS / IDE
+.DS_Store
+.idea
+.vscode
+*.tsbuildinfo
