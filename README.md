@@ -1,5 +1,7 @@
 # Lead Magnet Generator
 
+> **Antes que nada, leé [`ENUNCIADO.md`](./ENUNCIADO.md).** Ahí está el contexto del ejercicio, el problema de negocio y los criterios de evaluación.
+
 Two-stage agent pipeline:
 
 1. **Agent A (template builder)** — chats with you. Reads brand guidelines (PDF or TXT, including image-based InDesign brandbooks via `pdftotext` + `pdftoppm`) plus three optional context fields (offering, lead-magnet purpose, writing rules). Confirms the design with you, then writes a custom template (HTML + Tailwind + Handlebars) to `templates/<id>/`.
