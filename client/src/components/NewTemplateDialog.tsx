@@ -1,5 +1,23 @@
-import { Upload, X } from "lucide-react";
+import { Upload, X, PenLine, List } from "lucide-react";
 import { useState } from "react";
+
+const WRITING_RULE_PRESETS = [
+	{
+		label: "Data-driven",
+		value:
+			"Cite statistics and specific data points. Use concrete numbers. Avoid buzzwords ('cutting-edge', 'revolutionary', 'transform'). Keep paragraphs to 3 sentences max.",
+	},
+	{
+		label: "Prospect-first",
+		value:
+			"Lead with the prospect's pain points. Use 'you' language. Never pitch the prospect's own products. End each section with an actionable insight.",
+	},
+	{
+		label: "Conversational authority",
+		value:
+			"Conversational but authoritative. Active voice only. Bullet complex ideas. Avoid filler phrases. One key takeaway per section.",
+	},
+];
 
 interface Props {
 	open: boolean;
@@ -24,7 +42,9 @@ export default function NewTemplateDialog({
 	const [files, setFiles] = useState<File[]>([]);
 	const [companyOffering, setCompanyOffering] = useState("");
 	const [leadMagnetPurpose, setLeadMagnetPurpose] = useState("");
-	const [writingRules, setWritingRules] = useState("");
+	const [writingRulesMode, setWritingRulesMode] = useState<"preset" | "custom">("preset");
+	const [selectedPreset, setSelectedPreset] = useState(WRITING_RULE_PRESETS[0].value);
+	const [customRules, setCustomRules] = useState("");
 
 	if (!open) return null;
 
@@ -58,7 +78,7 @@ export default function NewTemplateDialog({
 							files,
 							companyOffering: companyOffering.trim(),
 							leadMagnetPurpose: leadMagnetPurpose.trim(),
-							writingRules: writingRules.trim(),
+							writingRules: writingRulesMode === "preset" ? selectedPreset : customRules.trim(),
 						});
 					}}
 					className="px-5 py-4 space-y-4"
@@ -154,6 +174,7 @@ export default function NewTemplateDialog({
 							/>
 						</div>
 						<div>
+							<div className="flex items-center justify-between">
 							<label
 								htmlFor="tpl-rules"
 								className="block text-sm font-medium text-slate-700"
@@ -163,14 +184,48 @@ export default function NewTemplateDialog({
 									(optional)
 								</span>
 							</label>
+							<button
+								type="button"
+								onClick={() =>
+									setWritingRulesMode((m) => (m === "preset" ? "custom" : "preset"))
+								}
+								className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800"
+							>
+								{writingRulesMode === "preset" ? (
+									<><PenLine className="w-3 h-3" /> Write my own</>
+								) : (
+									<><List className="w-3 h-3" /> Use preset</>
+								)}
+							</button>
+						</div>
+						{writingRulesMode === "preset" ? (
+							<>
+								<select
+									id="tpl-rules"
+									value={selectedPreset}
+									onChange={(e) => setSelectedPreset(e.target.value)}
+									className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 bg-white"
+								>
+									{WRITING_RULE_PRESETS.map((p) => (
+										<option key={p.label} value={p.value}>
+											{p.label}
+										</option>
+									))}
+								</select>
+								<p className="mt-1.5 text-xs text-slate-400 italic">
+									{WRITING_RULE_PRESETS.find((p) => p.value === selectedPreset)?.value}
+								</p>
+							</>
+						) : (
 							<textarea
 								id="tpl-rules"
-								value={writingRules}
-								onChange={(e) => setWritingRules(e.target.value)}
+								value={customRules}
+								onChange={(e) => setCustomRules(e.target.value)}
 								placeholder="e.g. Never pitch the prospect's product. Cite stats. Avoid 'cutting-edge', 'revolutionize', 'transform'."
 								rows={2}
 								className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-300"
 							/>
+						)}
 						</div>
 					</div>
 					<div className="flex justify-end gap-2 pt-2">
