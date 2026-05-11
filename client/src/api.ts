@@ -4,6 +4,7 @@ import type {
 	GenerationDetail,
 	GenerationListItem,
 	StartGenerationResponse,
+	SummarizeResponse,
 	TemplateDetail,
 	TemplateListItem,
 } from "./types";
@@ -75,6 +76,17 @@ export const api = {
 		jsonOrThrow(await fetch("/api/generations")),
 	getGeneration: async (runId: string): Promise<GenerationDetail> =>
 		jsonOrThrow(await fetch(`/api/generations/${encodeURIComponent(runId)}`)),
+	summarizeCompany: async (
+		companyName: string,
+		url: string,
+	): Promise<SummarizeResponse> => {
+		const res = await fetch("/api/summarize", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ companyName, url }),
+		});
+		return jsonOrThrow(res);
+	},
 	startGeneration: async (
 		templateId: string,
 		input: Record<string, unknown>,

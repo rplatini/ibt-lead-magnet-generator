@@ -64,3 +64,13 @@ export interface StartGenerationResponse {
 	runId: string;
 	streamUrl: string;
 }
+
+export interface Preset {
+	label: string;
+	value: string;
+}
+
+export interface SummarizeResponse {
+	companyOffering: Preset[];
+	leadMagnetPurpose: Preset[];
+}
