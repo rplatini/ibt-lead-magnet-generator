@@ -5,6 +5,7 @@ import Generator from "./routes/Generator";
 import History from "./routes/History";
 import HistoryDetail from "./routes/HistoryDetail";
 import TemplateBuilder from "./routes/TemplateBuilder";
+import TemplateReports from "./routes/TemplateReports";
 import TemplatesList from "./routes/TemplatesList";
 
 const queryClient = new QueryClient({
@@ -26,6 +27,7 @@ export default function App() {
 						<Route path="/templates/new" element={<TemplateBuilder />} />
 						<Route path="/templates/:id/edit" element={<TemplateBuilder />} />
 						<Route path="/templates/:id/generate" element={<Generator />} />
+						<Route path="/templates/:id/reports" element={<TemplateReports />} />
 						<Route path="/history" element={<History />} />
 						<Route path="/history/:runId" element={<HistoryDetail />} />
 					</Route>

@@ -28,7 +28,7 @@ async function readSidecar(runId: string): Promise<SidecarFile | null> {
 	}
 }
 
-generationsRouter.get("/", async (_req, res, next) => {
+generationsRouter.get("/", async (req, res, next) => {
 	try {
 		const items: Array<Omit<SidecarFile, "events">> = [];
 		let entries: string[] = [];
@@ -49,8 +49,13 @@ generationsRouter.get("/", async (_req, res, next) => {
 				// skip malformed sidecar
 			}
 		}
-		items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-		res.json(items);
+		const { templateId } = req.query;
+		const filtered =
+			typeof templateId === "string" && templateId
+				? items.filter((i) => i.templateId === templateId)
+				: items;
+		filtered.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+		res.json(filtered);
 	} catch (err) {
 		next(err);
 	}
