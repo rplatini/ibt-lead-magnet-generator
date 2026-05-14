@@ -17,16 +17,25 @@ Your job:
 2. **Cross-reference text and images**. Brandbooks have dedicated pages for: cover/intro, color palette, typography, logo usage, voice/tone. The extracted text usually contains the exact font and color names labeled on those pages. The images confirm what they look like.
 3. For typography: read the typeface name from the text. Do NOT guess from visual cues alone. If the brandbook lists multiple fonts (e.g. a display face and a body face), record the body face as "fontFamily" and add an optional "displayFontFamily" entry. Use Google Fonts–compatible names; if the exact font is not on Google Fonts, pick the closest Google Fonts match and note the original in voiceGuidelines.
 4. Read the example template at templateId='_example' (template.html, slot-schema.json, style-tokens.json) to understand the required shape.
-5. **CONFIRMATION GATE — DO NOT skip this step.** Before writing any files or rendering anything, post a short summary message to the user with:
-   - Brand colors you identified (with hex codes), font(s), voice/tone keywords.
-   - Proposed lead-magnet shape (cover page yes/no, number of sections, CTA style, page count target).
-   - Echo back the brand context provided (companyOffering, leadMagnetPurpose, writingRules). If any of those three is missing or marked "(not provided — ask during confirmation)", explicitly ask the user to fill it in. These are critical for the filler agent: they tell it what the customer sells, what the lead magnet should accomplish, and what writing rules to follow. Without them the filler will produce off-target content.
-   - Any clarifying questions if you noticed ambiguity.
-   - End with: "Reply 'go' to build the template, or tell me what to adjust."
-   Then STOP and wait for the user's reply. Do not call write_template_file or render_preview yet.
+5. **CONFIRMATION GATE — DO NOT skip this step.** Before writing any files or rendering anything, post a confirmation summary. Keep it under 1000 characters total. Use this exact structure — nothing more:
+
+   **Colors:** <hex1 label>, <hex2 label>, …\n
+   **Font:** <font name>\n
+   **Voice:** <2–3 keywords>\n
+   **Structure:** <e.g. 5 pages: cover, 3 content sections, CTA>\n
+   **Brand context:**
+   - companyOffering: <value or "(missing — please provide)">\n
+   - leadMagnetPurpose: <value or "(missing — please provide)">\n
+   - writingRules: <value or "(missing — please provide)">\n
+
+   Every item must be in a different line, and the brand context fields must be in a bullet list. Be concise but specific.
+
+   End with exactly this line: "Reply **go** to build the template, or tell me what to adjust."
+
+   Then STOP. Do not call write_template_file or render_preview yet.
 6. Once the user approves (e.g. "go", "yes", "looks good", "proceed"), iteratively WRITE four files under templates/<id>/:
    - template.html  (Tailwind via CDN, Handlebars slots like {{title}}, {{#each sections}})
-   - slot-schema.json  (declares slots and input fields the filler agent must produce); companyName is always required, DO NOT skip it
+   - slot-schema.json  (declares slots and input fields the filler agent must produce); targetCompany is always required, DO NOT skip it
    - style-tokens.json  (brandColor, accentColor, fontFamily, logoUrl, voiceGuidelines, plus any other tokens you read from the brandbook)
    - brand-context.json  (companyOffering, leadMagnetPurpose, writingRules — possibly refined based on the conversation)
 7. After all four files are written, call render_preview with realistic dummy data and tell the user the preview is ready.
@@ -95,6 +104,7 @@ export async function runTemplateBuilder(opts: RunOptions): Promise<void> {
 }
 
 export interface BrandContext {
+	companyUrl: string;
 	companyOffering: string;
 	leadMagnetPurpose: string;
 	writingRules: string;
@@ -263,11 +273,19 @@ function buildTools(
 			]),
 		},
 		async (args) => {
-			const text = await tools.readFile({
-				templateId: args.templateId,
-				file: args.file,
-			});
-			return { content: [{ type: "text", text }] };
+			try {
+				const text = await tools.readFile({
+					templateId: args.templateId,
+					file: args.file,
+				});
+				return { content: [{ type: "text", text }] };
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				return {
+					content: [{ type: "text", text: `error reading file: ${message}` }],
+					isError: true,
+				};
+			}
 		},
 	);
 
@@ -295,6 +313,7 @@ function queryOptions(
 	return {
 		model: "claude-haiku-4-5",
 		systemPrompt: SYSTEM_PROMPT,
+
 		mcpServers: { "lmg-template-builder": mcpServer },
 		tools: [
 			"mcp__lmg-template-builder__write_template_file",
