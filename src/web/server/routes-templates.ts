@@ -90,11 +90,15 @@ templatesRouter.get("/", async (_req, res, next) => {
 						createdAt = new Date(0).toISOString();
 					}
 				}
+				const status = existsSync(join(TEMPLATES_ROOT, id, "template.html"))
+					? "complete"
+					: "draft";
 				return {
 					id,
 					name: meta.name ?? id,
 					createdAt,
 					slotKeys,
+					status,
 				};
 			}),
 		);
@@ -122,6 +126,18 @@ templatesRouter.post(
 			const name = (req.body?.name as string | undefined)?.trim();
 			if (!name) {
 				res.status(400).json({ error: "name required" });
+				return;
+			}
+			const companyUrl = (req.body?.companyUrl as string | undefined)?.trim();
+			if (!companyUrl) {
+				res.status(400).json({ error: "companyUrl required" });
+				return;
+			}
+			try {
+				const u = new URL(companyUrl);
+				if (u.protocol !== "https:") throw new Error();
+			} catch {
+				res.status(400).json({ error: "companyUrl must be a valid https URL" });
 				return;
 			}
 			const files = (req.files as Express.Multer.File[] | undefined) ?? [];
@@ -173,6 +189,7 @@ templatesRouter.post(
 			);
 
 			const brandContext = {
+				companyUrl,
 				companyOffering: (
 					(req.body?.companyOffering as string | undefined) ?? ""
 				).trim(),

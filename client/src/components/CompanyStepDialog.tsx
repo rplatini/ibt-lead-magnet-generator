@@ -3,10 +3,19 @@ import { useState } from "react";
 import { api } from "../api";
 import type { SummarizeResponse } from "../types";
 
+function isValidHttpsUrl(value: string): boolean {
+	try {
+		const u = new URL(value);
+		return u.protocol === "https:";
+	} catch {
+		return false;
+	}
+}
+
 interface Props {
 	open: boolean;
 	onClose: () => void;
-	onNext: (data: { name: string; suggestions?: SummarizeResponse }) => void;
+	onNext: (data: { name: string; url: string; suggestions?: SummarizeResponse }) => void;
 }
 
 export default function CompanyStepDialog({ open, onClose, onNext }: Props) {
@@ -15,6 +24,7 @@ export default function CompanyStepDialog({ open, onClose, onNext }: Props) {
 	const [fetching, setFetching] = useState(false);
 	const [suggestions, setSuggestions] = useState<SummarizeResponse | undefined>();
 	const [fetchError, setFetchError] = useState<string | null>(null);
+	const [urlError, setUrlError] = useState<string | null>(null);
 
 	if (!open) return null;
 
@@ -65,8 +75,9 @@ export default function CompanyStepDialog({ open, onClose, onNext }: Props) {
 							type="text"
 							value={name}
 							onChange={(e) => setName(e.target.value)}
+							disabled={fetching}
 							placeholder="Acme Inc."
-							className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+							className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-50 disabled:bg-slate-50"
 						/>
 					</div>
 
@@ -76,9 +87,6 @@ export default function CompanyStepDialog({ open, onClose, onNext }: Props) {
 							className="block text-sm font-medium text-slate-700"
 						>
 							Company URL
-							<span className="ml-1 text-xs font-normal text-slate-400">
-								(optional)
-							</span>
 						</label>
 						<div className="mt-1 flex gap-2">
 							<input
@@ -89,14 +97,16 @@ export default function CompanyStepDialog({ open, onClose, onNext }: Props) {
 									setUrl(e.target.value);
 									setSuggestions(undefined);
 									setFetchError(null);
+									setUrlError(null);
 								}}
+								disabled={fetching}
 								placeholder="https://acme.com"
-								className="flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+								className="flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-50 disabled:bg-slate-50"
 							/>
 							<button
 								type="button"
 								onClick={() => void handleFetch()}
-								disabled={!url.trim() || !name.trim() || fetching}
+								disabled={!name.trim() || !url.trim() || !isValidHttpsUrl(url.trim()) || fetching}
 								className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-slate-200 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40 shrink-0"
 							>
 								{fetching ? (
@@ -109,6 +119,10 @@ export default function CompanyStepDialog({ open, onClose, onNext }: Props) {
 								{fetching ? "Fetching…" : suggestions ? "Done" : "Fetch & summarize"}
 							</button>
 						</div>
+
+						{urlError && (
+							<p className="mt-1.5 text-xs text-red-500">{urlError}</p>
+						)}
 
 						{fetchError && (
 							<p className="mt-1.5 text-xs text-red-500">
@@ -133,8 +147,19 @@ export default function CompanyStepDialog({ open, onClose, onNext }: Props) {
 						</button>
 						<button
 							type="button"
-							disabled={!name.trim()}
-							onClick={() => onNext({ name: name.trim(), suggestions })}
+							disabled={!name.trim() || !url.trim()}
+							onClick={() => {
+								const trimmedUrl = url.trim();
+								if (!trimmedUrl) {
+									setUrlError("Please enter the company URL.");
+									return;
+								}
+								if (!isValidHttpsUrl(trimmedUrl)) {
+									setUrlError("Enter a valid URL starting with https://");
+									return;
+								}
+								onNext({ name: name.trim(), url: trimmedUrl, suggestions });
+							}}
 							className="px-3 py-2 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50"
 						>
 							Next →

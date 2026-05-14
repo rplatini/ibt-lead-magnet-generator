@@ -24,10 +24,13 @@ interface Props {
 	open: boolean;
 	submitting: boolean;
 	companyName: string;
+	companyUrl: string;
 	suggestions?: SummarizeResponse;
 	onClose: () => void;
+	onBack: () => void;
 	onSubmit: (args: {
 		name: string;
+		url: string;
 		files: File[];
 		companyOffering: string;
 		leadMagnetPurpose: string;
@@ -39,8 +42,10 @@ export default function NewTemplateDialog({
 	open,
 	submitting,
 	companyName,
+	companyUrl,
 	suggestions,
 	onClose,
+	onBack,
 	onSubmit,
 }: Props) {
 	const [files, setFiles] = useState<File[]>([]);
@@ -98,6 +103,7 @@ export default function NewTemplateDialog({
 						if (files.length === 0) return;
 						onSubmit({
 							name: companyName,
+							url: companyUrl,
 							files,
 							companyOffering: offeringValue.trim(),
 							leadMagnetPurpose:
@@ -111,6 +117,10 @@ export default function NewTemplateDialog({
 					<div>
 						<p className="block text-sm font-medium text-slate-700">Company name</p>
 						<p className="mt-1 px-3 py-2 text-sm text-slate-900">{companyName}</p>
+					</div>
+					<div>
+						<p className="block text-sm font-medium text-slate-700">Company URL</p>
+						<p className="mt-1 px-3 py-2 text-sm text-slate-900">{companyUrl}</p>
 					</div>
 					<div>
 						<label
@@ -322,7 +332,16 @@ export default function NewTemplateDialog({
 							)}
 						</div>
 					</div>
-					<div className="flex justify-end gap-2 pt-2">
+					<div className="flex justify-between pt-2">
+						<button
+							type="button"
+							onClick={onBack}
+							disabled={submitting}
+							className="px-3 py-2 rounded-md border border-slate-200 text-slate-700 text-sm hover:bg-slate-100"
+						>
+							← Back
+						</button>
+						<div className="flex gap-2">
 						<button
 							type="button"
 							onClick={onClose}
@@ -338,6 +357,7 @@ export default function NewTemplateDialog({
 						>
 							{submitting ? "Creating…" : "Start chat"}
 						</button>
+					</div>
 					</div>
 				</form>
 			</div>

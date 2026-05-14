@@ -31,6 +31,7 @@ export default function TemplateBuilder() {
 	const [step2Open, setStep2Open] = useState(false);
 	const [companyData, setCompanyData] = useState<{
 		name: string;
+		url: string;
 		suggestions?: SummarizeResponse;
 	} | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -105,7 +106,7 @@ export default function TemplateBuilder() {
 	}, [templateId, navigate]);
 
 	const onStep1Next = useCallback(
-		(data: { name: string; suggestions?: SummarizeResponse }) => {
+		(data: { name: string; url: string; suggestions?: SummarizeResponse }) => {
 			setCompanyData(data);
 			setStep1Open(false);
 			setStep2Open(true);
@@ -116,6 +117,7 @@ export default function TemplateBuilder() {
 	const onCreateTemplate = useCallback(
 		async (args: {
 			name: string;
+			url: string;
 			files: File[];
 			companyOffering: string;
 			leadMagnetPurpose: string;
@@ -256,9 +258,11 @@ export default function TemplateBuilder() {
 			<NewTemplateDialog
 				open={step2Open}
 				companyName={companyData?.name ?? ""}
+				companyUrl={companyData?.url ?? ""}
 				suggestions={companyData?.suggestions}
 				submitting={creatingTemplate}
 				onClose={handleDialogClose}
+				onBack={() => { setStep2Open(false); setStep1Open(true); }}
 				onSubmit={onCreateTemplate}
 			/>
 		</div>

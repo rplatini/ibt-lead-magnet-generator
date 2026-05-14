@@ -12,10 +12,11 @@ export interface TemplateListItem {
 	name: string;
 	createdAt: string;
 	slotKeys: string[];
+	status: "complete" | "draft";
 }
 
 export interface SlotDef {
-	type: "string" | "html" | "number" | "boolean" | "object" | "array";
+	type: "string" | "html" | "number" | "boolean" | "object" | "array" | "url";
 	required?: boolean;
 	maxLength?: number;
 	hint?: string;

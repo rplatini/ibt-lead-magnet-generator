@@ -32,6 +32,7 @@ export const api = {
 	},
 	createTemplate: async (args: {
 		name: string;
+		url: string;
 		files: File[];
 		companyOffering?: string;
 		leadMagnetPurpose?: string;
@@ -39,6 +40,7 @@ export const api = {
 	}): Promise<CreateTemplateResponse> => {
 		const fd = new FormData();
 		fd.append("name", args.name);
+		fd.append("companyUrl", args.url);
 		for (const f of args.files) fd.append("guidelines", f);
 		if (args.companyOffering)
 			fd.append("companyOffering", args.companyOffering);
@@ -72,8 +74,14 @@ export const api = {
 		);
 		return jsonOrThrow(res);
 	},
-	listGenerations: async (): Promise<GenerationListItem[]> =>
-		jsonOrThrow(await fetch("/api/generations")),
+	listGenerations: async (templateId?: string): Promise<GenerationListItem[]> =>
+		jsonOrThrow(
+			await fetch(
+				templateId
+					? `/api/generations?templateId=${encodeURIComponent(templateId)}`
+					: "/api/generations",
+			),
+		),
 	getGeneration: async (runId: string): Promise<GenerationDetail> =>
 		jsonOrThrow(await fetch(`/api/generations/${encodeURIComponent(runId)}`)),
 	summarizeCompany: async (
