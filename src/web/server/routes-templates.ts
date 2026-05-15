@@ -4,7 +4,7 @@ import { readdir, readFile, rm, stat } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { Router } from "express";
 import multer from "multer";
-import { parseGuidelines } from "../../parsing/brand-guidelines";
+import { InvalidFileError, parseGuidelines } from "../../parsing/brand-guidelines";
 import { TEMPLATES_ROOT } from "./paths";
 import {
 	getSession,
@@ -153,26 +153,38 @@ templatesRouter.post(
 			const suffix = randomBytes(3).toString("hex");
 			const templateId = `${baseSlug}-${suffix}`;
 
-			const guidelines = await Promise.all(
-				files.map(async (f) => {
-					const ext = extname(f.originalname).toLowerCase();
-					if (ext !== ".pdf" && ext !== ".txt") {
-						throw new Error(`unsupported file extension: ${ext}`);
-					}
-					const tmpPath = join(
-						TEMPLATES_ROOT,
-						`.upload-${randomBytes(4).toString("hex")}${ext}`,
-					);
-					const { writeFile, unlink, mkdir } = await import("node:fs/promises");
-					await mkdir(TEMPLATES_ROOT, { recursive: true });
-					await writeFile(tmpPath, f.buffer);
-					try {
-						return await parseGuidelines(tmpPath);
-					} finally {
-						await unlink(tmpPath).catch(() => {});
-					}
-				}),
-			);
+			let guidelines: Awaited<ReturnType<typeof parseGuidelines>>[];
+			try {
+				guidelines = await Promise.all(
+					files.map(async (f) => {
+						const ext = extname(f.originalname).toLowerCase();
+						if (ext !== ".pdf" && ext !== ".txt") {
+							throw new InvalidFileError(`unsupported file extension: ${ext}`);
+						}
+						const tmpPath = join(
+							TEMPLATES_ROOT,
+							`.upload-${randomBytes(4).toString("hex")}${ext}`,
+						);
+						const { writeFile, unlink, mkdir } = await import(
+							"node:fs/promises"
+						);
+						await mkdir(TEMPLATES_ROOT, { recursive: true });
+						await writeFile(tmpPath, f.buffer);
+						try {
+							return await parseGuidelines(tmpPath);
+						} finally {
+							await unlink(tmpPath).catch(() => {});
+						}
+					}),
+				);
+			} catch (err) {
+				if (err instanceof InvalidFileError) {
+					console.error("[templates] invalid brand guidelines file:", err.message);
+					res.status(400).json({ error: err.message });
+					return;
+				}
+				throw err;
+			}
 
 			const { mkdir, writeFile } = await import("node:fs/promises");
 			const dir = join(TEMPLATES_ROOT, templateId);
