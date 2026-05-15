@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { AgentEvent } from "../../agents/agent-events";
-import { runTemplateBuilderStreaming } from "../../agents/template-builder";
+import {
+	type BrandContext,
+	runTemplateBuilderStreaming,
+} from "../../agents/template-builder";
 import type { ParsedGuidelines } from "../../parsing/brand-guidelines";
 import { TEMPLATES_ROOT } from "./paths";
 
@@ -73,11 +76,7 @@ export function getSessionByTemplate(templateId: string): Session | undefined {
 	return id ? sessions.get(id) : undefined;
 }
 
-export interface BrandContext {
-	companyOffering: string;
-	leadMagnetPurpose: string;
-	writingRules: string;
-}
+export type { BrandContext };
 
 export function startTemplateSession(args: {
 	templateId: string;

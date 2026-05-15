@@ -58,7 +58,9 @@ PDF PAGINATION RULES (strict — these prevent the most common bug: trailing whi
 
 Use the write_template_file tool to write each file. Use render_preview after every meaningful change so the user can see what they're getting.
 
-You may also edit meta.json (fields: templateId, name, createdAt, description) to refine the human-readable template name during the conversation. When you write the four template files, also update meta.json to include a "description" field: one sentence (no more) describing what kind of document this template generates (e.g. "Generates a 5-page competitive analysis lead magnet for B2B SaaS companies targeting VP-level buyers.").`;
+You may also edit meta.json (fields: templateId, name, createdAt, description) to refine the human-readable template name during the conversation. When you write the four template files, also update meta.json with these exact rules:
+- "name": the company name only — no subtitle, no colon, no extra words (e.g. "Acme Corp", not "Acme Corp: Hiring Benchmarks").
+- "description": one sentence, 12 words maximum, describing what kind of document this template generates (e.g. "Hiring benchmarks and AI recruitment strategies for HR leaders.").`;
 
 interface RunOptions {
 	templateId: string;
