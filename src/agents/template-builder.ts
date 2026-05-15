@@ -37,7 +37,7 @@ Your job:
    - template.html  (Tailwind via CDN, Handlebars slots like {{title}}, {{#each sections}})
    - slot-schema.json  (declares slots and input fields the filler agent must produce); targetCompany is always required, DO NOT skip it
    - style-tokens.json  (brandColor, accentColor, fontFamily, logoUrl, voiceGuidelines, plus any other tokens you read from the brandbook)
-   - brand-context.json  (companyOffering, leadMagnetPurpose, writingRules — possibly refined based on the conversation)
+   - brand-context.json  (companyUrl, companyOffering, leadMagnetPurpose, writingRules — possibly refined based on the conversation)
 7. After all four files are written, call render_preview with realistic dummy data and tell the user the preview is ready.
 8. Keep iterating with the user until they approve.
 
@@ -58,7 +58,7 @@ PDF PAGINATION RULES (strict — these prevent the most common bug: trailing whi
 
 Use the write_template_file tool to write each file. Use render_preview after every meaningful change so the user can see what they're getting.
 
-You may also edit meta.json (fields: templateId, name, createdAt) to refine the human-readable template name during the conversation.`;
+You may also edit meta.json (fields: templateId, name, createdAt, description) to refine the human-readable template name during the conversation. When you write the four template files, also update meta.json to include a "description" field: one sentence (no more) describing what kind of document this template generates (e.g. "Generates a 5-page competitive analysis lead magnet for B2B SaaS companies targeting VP-level buyers.").`;
 
 interface RunOptions {
 	templateId: string;
@@ -313,7 +313,6 @@ function queryOptions(
 	return {
 		model: "claude-haiku-4-5",
 		systemPrompt: SYSTEM_PROMPT,
-
 		mcpServers: { "lmg-template-builder": mcpServer },
 		tools: [
 			"mcp__lmg-template-builder__write_template_file",
@@ -364,7 +363,9 @@ function buildInitialContent(
 	const blocks: ContentBlock[] = [];
 	const headerLines: string[] = [`The template id is "${templateId}".`, ""];
 	if (brandContext) {
-		headerLines.push("Brand context (provided by the user):");
+		headerLines.push(
+			`- companyUrl: ${brandContext.companyUrl || "(not provided — ask during confirmation)"}`,
+		);
 		headerLines.push(
 			`- companyOffering: ${brandContext.companyOffering || "(not provided — ask during confirmation)"}`,
 		);
