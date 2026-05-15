@@ -66,6 +66,7 @@ generationsRouter.post("/", (req, res, next) => {
 		const body = req.body as {
 			templateId?: string;
 			input?: Record<string, unknown>;
+			feedback?: string;
 		};
 		if (!body?.templateId) {
 			res.status(400).json({ error: "templateId required" });
@@ -79,6 +80,7 @@ generationsRouter.post("/", (req, res, next) => {
 		const { runId } = startGenerationRun({
 			templateId: body.templateId,
 			input: body.input ?? {},
+			feedback: body.feedback,
 		});
 		res.status(202).json({
 			runId,

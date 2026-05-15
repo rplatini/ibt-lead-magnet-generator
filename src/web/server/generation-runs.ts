@@ -7,6 +7,7 @@ interface GenerationRun {
 	runId: string;
 	templateId: string;
 	input: Record<string, unknown>;
+	feedback?: string;
 	eventBuffer: AgentEvent[];
 	subscribers: Set<(event: AgentEvent) => void>;
 	done: boolean;
@@ -21,12 +22,14 @@ export function getRun(runId: string): GenerationRun | undefined {
 export function startGenerationRun(args: {
 	templateId: string;
 	input: Record<string, unknown>;
+	feedback?: string;
 }): { runId: string } {
 	const runId = `${args.templateId}-${randomUUID().slice(0, 8)}`;
 	const run: GenerationRun = {
 		runId,
 		templateId: args.templateId,
 		input: args.input,
+		feedback: args.feedback,
 		eventBuffer: [],
 		subscribers: new Set(),
 		done: false,
@@ -53,6 +56,7 @@ async function executeRun(run: GenerationRun): Promise<void> {
 		for await (const event of runLeadMagnetFillerStreaming({
 			templateId: run.templateId,
 			input: run.input,
+			feedback: run.feedback,
 			templatesRoot: TEMPLATES_ROOT,
 			outputDir: OUTPUT_DIR,
 			runId: run.runId,
