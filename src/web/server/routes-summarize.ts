@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import express from "express";
 
@@ -12,6 +11,14 @@ summarizeRouter.post("/", async (req, res) => {
 
 	if (!companyName || !url) {
 		res.status(400).json({ error: "companyName and url are required" });
+		return;
+	}
+
+	try {
+		const u = new URL(url);
+		if (u.protocol !== "https:") throw new Error();
+	} catch {
+		res.status(400).json({ error: "url must be a valid https URL" });
 		return;
 	}
 
@@ -70,9 +77,21 @@ Return ONLY a valid JSON object. No markdown fences, no explanation, no sources,
 		const fenced = finalText.match(/```(?:json)?\s*([\s\S]*?)```/i);
 		const cleaned = fenced ? fenced[1].trim() : finalText.trim();
 		const parsed = JSON.parse(cleaned);
+		const toPresets = (arr: unknown): Array<{ label: string; value: string }> =>
+			Array.isArray(arr)
+				? arr
+						.filter(
+							(e): e is { label: string; value: string } =>
+								e !== null &&
+								typeof e === "object" &&
+								typeof (e as Record<string, unknown>).label === "string" &&
+								typeof (e as Record<string, unknown>).value === "string",
+						)
+						.map((e) => ({ label: e.label, value: e.value }))
+				: [];
 		res.json({
-			companyOffering: Array.isArray(parsed.companyOffering) ? parsed.companyOffering : [],
-			leadMagnetPurpose: Array.isArray(parsed.leadMagnetPurpose) ? parsed.leadMagnetPurpose : [],
+			companyOffering: toPresets(parsed.companyOffering),
+			leadMagnetPurpose: toPresets(parsed.leadMagnetPurpose),
 		});
 	} catch {
 		console.error("[summarize] failed to parse agent text:", JSON.stringify(finalText));

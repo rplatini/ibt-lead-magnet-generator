@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
-import { readdir, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { Router } from "express";
 import multer from "multer";
@@ -165,9 +165,6 @@ templatesRouter.post(
 							TEMPLATES_ROOT,
 							`.upload-${randomBytes(4).toString("hex")}${ext}`,
 						);
-						const { writeFile, unlink, mkdir } = await import(
-							"node:fs/promises"
-						);
 						await mkdir(TEMPLATES_ROOT, { recursive: true });
 						await writeFile(tmpPath, f.buffer);
 						try {
@@ -186,7 +183,6 @@ templatesRouter.post(
 				throw err;
 			}
 
-			const { mkdir, writeFile } = await import("node:fs/promises");
 			const dir = join(TEMPLATES_ROOT, templateId);
 			await mkdir(dir, { recursive: true });
 			await writeFile(

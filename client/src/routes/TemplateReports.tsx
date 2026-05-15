@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, MoreVertical, Sparkles, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
 import type { GenerationListItem } from "../types";
@@ -125,7 +125,23 @@ function ReportRow({
 	onDelete: (runId: string) => void;
 }) {
 	const [menuOpen, setMenuOpen] = useState(false);
+	const triggerRef = useRef<HTMLButtonElement>(null);
+	const menuRef = useRef<HTMLDivElement>(null);
 	const target = pickTarget(row.input);
+
+	useEffect(() => {
+		if (!menuOpen) return;
+		menuRef.current?.querySelector("button")?.focus();
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") {
+				setMenuOpen(false);
+				triggerRef.current?.focus();
+			}
+		};
+		document.addEventListener("keydown", handleKeyDown);
+		return () => document.removeEventListener("keydown", handleKeyDown);
+	}, [menuOpen]);
+
 	return (
 		<tr className="hover:bg-slate-50">
 			<td className="px-4 py-2.5">
@@ -142,7 +158,7 @@ function ReportRow({
 				{relative(row.createdAt)}
 			</td>
 			<td className="px-4 py-2.5 text-slate-500 tabular-nums text-xs">
-				{(row.durationMs / 1000).toFixed(1)}s
+				{row.durationMs != null ? `${(row.durationMs / 1000).toFixed(1)}s` : "—"}
 			</td>
 			<td className="px-4 py-2.5">
 				<StatusBadge status={row.status} />
@@ -150,22 +166,29 @@ function ReportRow({
 			<td className="px-4 py-2.5">
 				<div className="relative flex justify-end">
 					<button
+						ref={triggerRef}
 						type="button"
 						onClick={() => setMenuOpen((v) => !v)}
 						aria-label="Run actions"
+						aria-expanded={menuOpen}
+						aria-haspopup="menu"
 						className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100"
 					>
 						<MoreVertical className="w-4 h-4" aria-hidden="true" />
 					</button>
 					{menuOpen && (
 						<div
+							ref={menuRef}
+							role="menu"
 							className="absolute right-0 bottom-full mb-1 w-32 rounded-md border border-slate-200 bg-white shadow-lg z-10"
 							onMouseLeave={() => setMenuOpen(false)}
 						>
 							<button
+								role="menuitem"
 								type="button"
 								onClick={() => {
 									setMenuOpen(false);
+									triggerRef.current?.focus();
 									if (window.confirm(`Delete run "${row.runId}"? This cannot be undone.`)) {
 										onDelete(row.runId);
 									}

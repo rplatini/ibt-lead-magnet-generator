@@ -370,7 +370,7 @@ function buildInitialContent(
 	const headerLines: string[] = [`The template id is "${templateId}".`, ""];
 	if (brandContext) {
 		headerLines.push(
-			`- companyUrl: ${brandContext.companyUrl || "(not provided — ask during confirmation)"}`,
+			`- companyUrl: ${brandContext.companyUrl}`,
 		);
 		headerLines.push(
 			`- companyOffering: ${brandContext.companyOffering || "(not provided — ask during confirmation)"}`,

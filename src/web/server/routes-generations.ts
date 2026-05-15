@@ -117,6 +117,10 @@ generationsRouter.get("/:runId/pdf", (req, res) => {
 generationsRouter.delete("/:runId", async (req, res, next) => {
 	try {
 		const { runId } = req.params;
+		if (!/^[A-Za-z0-9_-]+$/.test(runId)) {
+			res.status(400).json({ error: "invalid runId" });
+			return;
+		}
 		const jsonPath = join(OUTPUT_DIR, `${runId}.json`);
 		if (!existsSync(jsonPath)) {
 			res.status(404).json({ error: "generation not found" });

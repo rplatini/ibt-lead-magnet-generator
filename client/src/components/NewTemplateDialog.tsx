@@ -80,7 +80,7 @@ export default function NewTemplateDialog({
 		setFileError(null);
 		setCustomPurpose("");
 		setCustomRules("");
-		if (aiOffering) setOfferingValue(aiOffering);
+		setOfferingValue(aiOffering);
 		if (suggestions?.leadMagnetPurpose?.length) {
 			setPurposeMode("preset");
 			setSelectedPurpose(suggestions.leadMagnetPurpose[0].value);
