@@ -12,8 +12,12 @@ export default function Generator() {
 	const templateId = id ?? "";
 	const [searchParams] = useSearchParams();
 	const { state } = useLocation();
-	const backTo = state?.fromRunId ? `/history/${state.fromRunId}` : "/";
-	const backLabel = state?.fromRunId ? "Report" : "Templates";
+	const backTo = state?.fromRunId
+		? `/history/${state.fromRunId}`
+		: state?.fromTemplateId
+			? `/templates/${state.fromTemplateId}/reports`
+			: "/";
+	const backLabel = state?.fromRunId ? "Report" : state?.fromTemplateId ? "Reports" : "Templates";
 	const prefill = searchParams.get("prefill");
 
 	const { data: template, isLoading } = useQuery({
@@ -114,6 +118,7 @@ export default function Generator() {
 			<div>
 				<Link
 					to={backTo}
+					state={state?.fromRunId && state?.fromTemplateId ? { fromTemplateId: state.fromTemplateId } : undefined}
 					className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 mb-3"
 				>
 					<ArrowLeft className="w-3 h-3" aria-hidden="true" />

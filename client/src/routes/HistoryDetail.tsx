@@ -57,7 +57,7 @@ export default function HistoryDetail() {
 						{prefill && (
 							<Link
 								to={`/templates/${data.templateId}/generate?prefill=${encodeURIComponent(prefill)}`}
-								state={{ fromRunId: runId }}
+								state={{ fromRunId: runId, fromTemplateId: data.templateId }}
 								className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-100"
 							>
 								<RefreshCcw className="w-3.5 h-3.5" aria-hidden="true" />
