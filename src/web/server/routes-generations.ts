@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { Router } from "express";
 import { startGenerationRun, subscribeToRun } from "./generation-runs";
@@ -112,6 +112,23 @@ generationsRouter.get("/:runId/pdf", (req, res) => {
 	}
 	res.setHeader("Cache-Control", "no-store");
 	res.sendFile(path);
+});
+
+generationsRouter.delete("/:runId", async (req, res, next) => {
+	try {
+		const { runId } = req.params;
+		const jsonPath = join(OUTPUT_DIR, `${runId}.json`);
+		if (!existsSync(jsonPath)) {
+			res.status(404).json({ error: "generation not found" });
+			return;
+		}
+		await rm(jsonPath, { force: true });
+		const pdfPath = join(OUTPUT_DIR, `${runId}.pdf`);
+		await rm(pdfPath, { force: true });
+		res.status(204).end();
+	} catch (err) {
+		next(err);
+	}
 });
 
 generationsRouter.get("/:runId/stream", (req, res) => {

@@ -12,7 +12,14 @@ import type {
 async function jsonOrThrow<T>(res: Response): Promise<T> {
 	if (!res.ok) {
 		const text = await res.text().catch(() => "");
-		throw new Error(`${res.status} ${res.statusText}: ${text}`);
+		let message = `${res.status} ${res.statusText}`;
+		try {
+			const body = JSON.parse(text) as { error?: string };
+			if (body.error) message = body.error;
+		} catch {
+			if (text) message = text;
+		}
+		throw new Error(message);
 	}
 	return res.json() as Promise<T>;
 }
@@ -94,6 +101,14 @@ export const api = {
 			body: JSON.stringify({ companyName, url }),
 		});
 		return jsonOrThrow(res);
+	},
+	deleteGeneration: async (runId: string): Promise<void> => {
+		const res = await fetch(`/api/generations/${encodeURIComponent(runId)}`, {
+			method: "DELETE",
+		});
+		if (!res.ok && res.status !== 204) {
+			throw new Error(`${res.status} ${res.statusText}`);
+		}
 	},
 	startGeneration: async (
 		templateId: string,

@@ -1,11 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, MoreVertical, Sparkles, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
 import type { GenerationListItem } from "../types";
 
 export default function TemplateReports() {
 	const { id = "" } = useParams<{ id: string }>();
+	const queryClient = useQueryClient();
 
 	const { data: template } = useQuery({
 		queryKey: ["templates", id],
@@ -17,6 +19,13 @@ export default function TemplateReports() {
 		queryKey: ["generations", id],
 		queryFn: () => api.listGenerations(id),
 		enabled: !!id,
+	});
+
+	const deleteMutation = useMutation({
+		mutationFn: (runId: string) => api.deleteGeneration(runId),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["generations", id] });
+		},
 	});
 
 	const heading = template?.name ?? id;
@@ -44,6 +53,7 @@ export default function TemplateReports() {
 				) : (
 					<Link
 						to={`/templates/${id}/generate`}
+						state={{ fromTemplateId: id }}
 						className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-900 text-white text-xs font-medium hover:bg-slate-800"
 					>
 						<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
@@ -79,11 +89,17 @@ export default function TemplateReports() {
 								<Th>Created</Th>
 								<Th>Duration</Th>
 								<Th>Status</Th>
+								<th className="px-4 py-2" />
 							</tr>
 						</thead>
 						<tbody className="[&_tr:not(:last-child)_td]:border-b [&_tr:not(:last-child)_td]:border-gray-100">
 							{data.map((row) => (
-								<ReportRow key={row.runId} row={row} templateId={id} />
+								<ReportRow
+									key={row.runId}
+									row={row}
+									templateId={id}
+									onDelete={(runId) => deleteMutation.mutate(runId)}
+								/>
 							))}
 						</tbody>
 					</table>
@@ -99,7 +115,16 @@ function Th({ children }: { children: React.ReactNode }) {
 	);
 }
 
-function ReportRow({ row, templateId }: { row: GenerationListItem; templateId: string }) {
+function ReportRow({
+	row,
+	templateId,
+	onDelete,
+}: {
+	row: GenerationListItem;
+	templateId: string;
+	onDelete: (runId: string) => void;
+}) {
+	const [menuOpen, setMenuOpen] = useState(false);
 	const target = pickTarget(row.input);
 	return (
 		<tr className="hover:bg-slate-50">
@@ -121,6 +146,38 @@ function ReportRow({ row, templateId }: { row: GenerationListItem; templateId: s
 			</td>
 			<td className="px-4 py-2.5">
 				<StatusBadge status={row.status} />
+			</td>
+			<td className="px-4 py-2.5">
+				<div className="relative flex justify-end">
+					<button
+						type="button"
+						onClick={() => setMenuOpen((v) => !v)}
+						aria-label="Run actions"
+						className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100"
+					>
+						<MoreVertical className="w-4 h-4" aria-hidden="true" />
+					</button>
+					{menuOpen && (
+						<div
+							className="absolute right-0 bottom-full mb-1 w-32 rounded-md border border-slate-200 bg-white shadow-lg z-10"
+							onMouseLeave={() => setMenuOpen(false)}
+						>
+							<button
+								type="button"
+								onClick={() => {
+									setMenuOpen(false);
+									if (window.confirm(`Delete run "${row.runId}"? This cannot be undone.`)) {
+										onDelete(row.runId);
+									}
+								}}
+								className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+							>
+								<Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+								Delete
+							</button>
+						</div>
+					)}
+				</div>
 			</td>
 		</tr>
 	);
