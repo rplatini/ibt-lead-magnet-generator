@@ -49,6 +49,7 @@ export default function NewTemplateDialog({
 	onSubmit,
 }: Props) {
 	const [files, setFiles] = useState<File[]>([]);
+	const [fileError, setFileError] = useState<string | null>(null);
 
 	const aiOffering = suggestions?.companyOffering?.[0]?.value ?? "";
 	const [offeringValue, setOfferingValue] = useState(aiOffering);
@@ -76,6 +77,7 @@ export default function NewTemplateDialog({
 	useEffect(() => {
 		if (!open) return;
 		setFiles([]);
+		setFileError(null);
 		setCustomPurpose("");
 		setCustomRules("");
 		if (aiOffering) setOfferingValue(aiOffering);
@@ -157,8 +159,21 @@ export default function NewTemplateDialog({
 								multiple
 								className="hidden"
 								onChange={(e) => {
-									const list = e.target.files;
-									setFiles(list ? Array.from(list) : []);
+									const selected = e.target.files ? Array.from(e.target.files) : [];
+									const invalid = selected.filter((f) => {
+										const ext = f.name.slice(f.name.lastIndexOf(".")).toLowerCase();
+										return ext !== ".pdf" && ext !== ".txt";
+									});
+									if (invalid.length > 0) {
+										setFileError(
+											`Unsupported file${invalid.length > 1 ? "s" : ""}: ${invalid.map((f) => f.name).join(", ")}. Only PDF and TXT are allowed.`,
+										);
+										setFiles([]);
+										e.target.value = "";
+									} else {
+										setFileError(null);
+										setFiles(selected);
+									}
 								}}
 							/>
 						</label>
@@ -168,6 +183,9 @@ export default function NewTemplateDialog({
 									<li key={f.name}>· {f.name}</li>
 								))}
 							</ul>
+						)}
+						{fileError && (
+							<p className="mt-1.5 text-xs text-red-500">{fileError}</p>
 						)}
 					</div>
 					<div className="space-y-3 pt-2 border-t border-slate-100">
@@ -364,7 +382,7 @@ export default function NewTemplateDialog({
 						</button>
 						<button
 							type="submit"
-							disabled={submitting || files.length === 0}
+							disabled={submitting || files.length === 0 || !!fileError}
 							className="px-3 py-2 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50"
 						>
 							{submitting ? "Creating…" : "Start chat"}
