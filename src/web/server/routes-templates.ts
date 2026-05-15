@@ -26,6 +26,7 @@ interface TemplateMeta {
 	templateId?: string;
 	name?: string;
 	createdAt?: string;
+	description?: string;
 }
 
 async function readMeta(templateId: string): Promise<TemplateMeta> {
@@ -99,6 +100,7 @@ templatesRouter.get("/", async (_req, res, next) => {
 					createdAt,
 					slotKeys,
 					status,
+					description: meta.description ?? null,
 				};
 			}),
 		);
@@ -239,9 +241,11 @@ templatesRouter.get("/:id", async (req, res, next) => {
 			id,
 			name: meta.name ?? id,
 			createdAt: meta.createdAt ?? null,
+			description: meta.description ?? null,
 			hasPreview: existsSync(join(dir, "preview.pdf")),
 			slotSchema: slotSchemaRaw ? JSON.parse(slotSchemaRaw) : null,
 			styleTokens: styleTokensRaw ? JSON.parse(styleTokensRaw) : null,
+			status: existsSync(join(dir, "template.html")) ? "complete" : "draft",
 		});
 	} catch (err) {
 		next(err);
@@ -295,11 +299,12 @@ templatesRouter.post("/:id/resume-session", async (req, res) => {
 	).catch(() => null);
 	const brandContext = brandContextRaw
 		? (JSON.parse(brandContextRaw) as {
+				companyUrl: string;
 				companyOffering: string;
 				leadMagnetPurpose: string;
 				writingRules: string;
 			})
-		: { companyOffering: "", leadMagnetPurpose: "", writingRules: "" };
+		: { companyUrl: "", companyOffering: "", leadMagnetPurpose: "", writingRules: "" };
 	const { sessionId } = startTemplateSession({
 		templateId: id,
 		guidelines: [

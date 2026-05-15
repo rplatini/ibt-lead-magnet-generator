@@ -2,7 +2,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import Generator from "./routes/Generator";
-import History from "./routes/History";
 import HistoryDetail from "./routes/HistoryDetail";
 import TemplateBuilder from "./routes/TemplateBuilder";
 import TemplateReports from "./routes/TemplateReports";
@@ -28,7 +27,6 @@ export default function App() {
 						<Route path="/templates/:id/edit" element={<TemplateBuilder />} />
 						<Route path="/templates/:id/generate" element={<Generator />} />
 						<Route path="/templates/:id/reports" element={<TemplateReports />} />
-						<Route path="/history" element={<History />} />
 						<Route path="/history/:runId" element={<HistoryDetail />} />
 					</Route>
 				</Routes>

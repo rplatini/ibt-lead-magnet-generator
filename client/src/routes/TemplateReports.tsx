@@ -36,18 +36,26 @@ export default function TemplateReports() {
 						Reports · {heading}
 					</h1>
 				</div>
-				<Link
-					to={`/templates/${id}/generate`}
-					className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-900 text-white text-xs font-medium hover:bg-slate-800"
-				>
-					<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-					Generate report
-				</Link>
+				{template?.status === "draft" ? (
+					<span className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-100 text-slate-400 text-xs font-medium cursor-not-allowed">
+						<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+						Generate report
+					</span>
+				) : (
+					<Link
+						to={`/templates/${id}/generate`}
+						className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-900 text-white text-xs font-medium hover:bg-slate-800"
+					>
+						<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+						Generate report
+					</Link>
+				)}
 			</div>
-			<p className="text-sm text-slate-500 mb-6 ml-8">
-				All generation runs for this template. Each row links to the run detail
-				with PDF and event log.
-			</p>
+			{template?.description && (
+				<p className="text-sm text-slate-500 mb-6 ml-8">
+					{template.description}
+				</p>
+			)}
 
 			{isLoading && <div className="text-sm text-slate-500">Loading runs…</div>}
 			{error && (
@@ -75,7 +83,7 @@ export default function TemplateReports() {
 						</thead>
 						<tbody className="[&_tr:not(:last-child)_td]:border-b [&_tr:not(:last-child)_td]:border-gray-100">
 							{data.map((row) => (
-								<ReportRow key={row.runId} row={row} />
+								<ReportRow key={row.runId} row={row} templateId={id} />
 							))}
 						</tbody>
 					</table>
@@ -91,13 +99,14 @@ function Th({ children }: { children: React.ReactNode }) {
 	);
 }
 
-function ReportRow({ row }: { row: GenerationListItem }) {
+function ReportRow({ row, templateId }: { row: GenerationListItem; templateId: string }) {
 	const target = pickTarget(row.input);
 	return (
 		<tr className="hover:bg-slate-50">
 			<td className="px-4 py-2.5">
 				<Link
 					to={`/history/${row.runId}`}
+					state={{ fromTemplateId: templateId }}
 					className="font-medium text-slate-900 hover:underline"
 				>
 					{row.runId}

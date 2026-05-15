@@ -13,6 +13,7 @@ export interface TemplateListItem {
 	createdAt: string;
 	slotKeys: string[];
 	status: "complete" | "draft";
+	description: string | null;
 }
 
 export interface SlotDef {
@@ -37,9 +38,11 @@ export interface TemplateDetail {
 	id: string;
 	name: string;
 	createdAt: string | null;
+	description: string | null;
 	hasPreview: boolean;
 	slotSchema: SlotSchema | null;
 	styleTokens: Record<string, unknown> | null;
+	status: "complete" | "draft";
 }
 
 export interface GenerationListItem {
