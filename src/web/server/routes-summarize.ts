@@ -1,10 +1,6 @@
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import express from "express";
-
-const CLAUDE_EXECUTABLE =
-	process.env.CLAUDE_CODE_EXECUTABLE ?? join(homedir(), ".local/bin/claude");
 
 export const summarizeRouter = express.Router();
 
@@ -37,7 +33,6 @@ Return ONLY a valid JSON object. No markdown fences, no explanation, no sources,
 			model: "claude-haiku-4-5",
 			systemPrompt:
 				"You are a B2B marketing researcher. Use WebSearch to visit the company website and understand what they sell and who their target buyer is. Return only the requested JSON with no markdown fences.",
-			pathToClaudeCodeExecutable: CLAUDE_EXECUTABLE,
 			tools: ["WebSearch"],
 			allowedTools: ["WebSearch"],
 			permissionMode: "bypassPermissions",
