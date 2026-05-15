@@ -8,21 +8,23 @@ interface Props {
 	onSubmit: () => void;
 	submitting?: boolean;
 	submitLabel?: string;
+	readonly?: boolean;
 }
 
 function camelToLabel(key: string): string {
 	const spaced = key.replace(/([A-Z])/g, " $1").toLowerCase();
-	return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+	const capitalized = spaced.charAt(0).toUpperCase() + spaced.slice(1);
+	return capitalized.replace(/\burl\b/gi, "URL");
 }
 
 function validateUrl(val: string): string | null {
 	if (!val.trim()) return "Please enter a URL";
 	try {
 		const u = new URL(val);
-		if (u.protocol !== "https:" && u.protocol !== "http:") throw new Error();
+		if (u.protocol !== "https:") throw new Error();
 		return null;
 	} catch {
-		return "Please enter a valid URL (e.g. https://example.com)";
+		return "Please enter a valid URL starting with https://";
 	}
 }
 
@@ -33,6 +35,7 @@ export default function SlotForm({
 	onSubmit,
 	submitting,
 	submitLabel = "Generate",
+	readonly = false,
 }: Props) {
 	const inputDefs = schema.input ?? {};
 	const entries = Object.entries(inputDefs);
@@ -64,6 +67,30 @@ export default function SlotForm({
 		}
 		onSubmit();
 	};
+
+	if (readonly) {
+		return (
+			<div className="space-y-4">
+				{entries.length === 0 && (
+					<div className="text-sm text-slate-500">
+						This template has no input fields.
+					</div>
+				)}
+				{entries.map(([key, def]) => (
+					<Field
+						key={key}
+						fieldKey={key}
+						def={def}
+						value={value[key]}
+						onChange={() => {}}
+						error={null}
+						onError={() => {}}
+						readonly
+					/>
+				))}
+			</div>
+		);
+	}
 
 	return (
 		<form onSubmit={handleSubmit} className="space-y-4">
@@ -101,6 +128,7 @@ function Field({
 	onChange,
 	error,
 	onError,
+	readonly = false,
 }: {
 	fieldKey: string;
 	def: SlotDef;
@@ -108,6 +136,7 @@ function Field({
 	onChange: (next: unknown) => void;
 	error: string | null;
 	onError: (msg: string | null) => void;
+	readonly?: boolean;
 }) {
 	const label = (
 		<label
@@ -121,6 +150,26 @@ function Field({
 	const hint = def.hint ? (
 		<p className="text-xs text-slate-500 mt-0.5">{def.hint}</p>
 	) : null;
+
+	if (readonly) {
+		const displayValue =
+			value === undefined || value === null
+				? "—"
+				: typeof value === "object"
+					? JSON.stringify(value, null, 2)
+					: String(value);
+		return (
+			<div>
+				<p className="block text-sm font-medium text-slate-700">
+					{camelToLabel(fieldKey)}
+				</p>
+				<p className="mt-1 px-3 py-2 text-sm text-slate-700 bg-slate-50 rounded-md border border-slate-200 whitespace-pre-wrap break-all">
+					{displayValue}
+				</p>
+				{hint}
+			</div>
+		);
+	}
 
 	if (def.type === "url") {
 		const borderClass = error
@@ -138,9 +187,7 @@ function Field({
 						onChange(e.target.value);
 					}}
 					onBlur={(e) => {
-						if (e.target.value) {
-							onError(validateUrl(e.target.value));
-						}
+						onError(validateUrl(e.target.value));
 					}}
 					placeholder="https://example.com"
 					className={`mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${borderClass}`}

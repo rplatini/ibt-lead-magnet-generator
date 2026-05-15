@@ -47,16 +47,22 @@ Return ONLY a valid JSON object. No markdown fences, no explanation, no sources,
 	});
 
 	let finalText = "";
-	for await (const event of session) {
-		// biome-ignore lint/suspicious/noExplicitAny: SDK message shape varies
-		const e = event as any;
-		if (e.type === "assistant" && Array.isArray(e.message?.content)) {
-			for (const block of e.message.content) {
-				if (block.type === "text") {
-					finalText = block.text;
+	try {
+		for await (const event of session) {
+			// biome-ignore lint/suspicious/noExplicitAny: SDK message shape varies
+			const e = event as any;
+			if (e.type === "assistant" && Array.isArray(e.message?.content)) {
+				for (const block of e.message.content) {
+					if (block.type === "text") {
+						finalText += block.text;
+					}
 				}
 			}
 		}
+	} catch (err) {
+		console.error("[summarize] agent stream error:", err);
+		res.status(500).json({ error: "Failed to fetch company information" });
+		return;
 	}
 
 	if (!finalText) {
@@ -69,7 +75,10 @@ Return ONLY a valid JSON object. No markdown fences, no explanation, no sources,
 		const fenced = finalText.match(/```(?:json)?\s*([\s\S]*?)```/i);
 		const cleaned = fenced ? fenced[1].trim() : finalText.trim();
 		const parsed = JSON.parse(cleaned);
-		res.json(parsed);
+		res.json({
+			companyOffering: Array.isArray(parsed.companyOffering) ? parsed.companyOffering : [],
+			leadMagnetPurpose: Array.isArray(parsed.leadMagnetPurpose) ? parsed.leadMagnetPurpose : [],
+		});
 	} catch {
 		console.error("[summarize] failed to parse agent text:", JSON.stringify(finalText));
 		res.json({ companyOffering: [], leadMagnetPurpose: [] });

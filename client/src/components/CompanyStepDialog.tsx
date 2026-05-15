@@ -74,7 +74,12 @@ export default function CompanyStepDialog({ open, onClose, onNext }: Props) {
 							id="cs-name"
 							type="text"
 							value={name}
-							onChange={(e) => setName(e.target.value)}
+							onChange={(e) => {
+								setName(e.target.value);
+								setSuggestions(undefined);
+								setFetchError(null);
+								setUrlError(null);
+				}}
 							disabled={fetching}
 							placeholder="Acme Inc."
 							className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-50 disabled:bg-slate-50"
@@ -106,7 +111,7 @@ export default function CompanyStepDialog({ open, onClose, onNext }: Props) {
 							<button
 								type="button"
 								onClick={() => void handleFetch()}
-								disabled={!name.trim() || !url.trim() || !isValidHttpsUrl(url.trim()) || fetching}
+								disabled={!name.trim() || !url.trim() || !isValidHttpsUrl(url.trim()) || fetching || !!suggestions}
 								className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-slate-200 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40 shrink-0"
 							>
 								{fetching ? (

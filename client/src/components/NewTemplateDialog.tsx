@@ -1,5 +1,5 @@
 import { Check, List, PenLine, Upload, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SummarizeResponse } from "../types";
 
 const WRITING_RULE_PRESETS = [
@@ -52,6 +52,14 @@ export default function NewTemplateDialog({
 
 	const aiOffering = suggestions?.companyOffering?.[0]?.value ?? "";
 	const [offeringValue, setOfferingValue] = useState(aiOffering);
+	const offeringRef = useRef<HTMLTextAreaElement>(null);
+
+	useEffect(() => {
+		const el = offeringRef.current;
+		if (!el) return;
+		el.style.height = "auto";
+		el.style.height = `${el.scrollHeight}px`;
+	}, [offeringValue]);
 
 	const [purposeMode, setPurposeMode] = useState<"preset" | "custom">(
 		suggestions?.leadMagnetPurpose?.length ? "preset" : "custom",
@@ -67,12 +75,15 @@ export default function NewTemplateDialog({
 
 	useEffect(() => {
 		if (!open) return;
+		setFiles([]);
+		setCustomPurpose("");
+		setCustomRules("");
 		if (aiOffering) setOfferingValue(aiOffering);
 		if (suggestions?.leadMagnetPurpose?.length) {
 			setPurposeMode("preset");
 			setSelectedPurpose(suggestions.leadMagnetPurpose[0].value);
 		}
-	}, [open, aiOffering, suggestions?.leadMagnetPurpose]);
+	}, [open, companyName, companyUrl, aiOffering, suggestions?.leadMagnetPurpose]);
 
 	if (!open) return null;
 
@@ -193,11 +204,12 @@ export default function NewTemplateDialog({
 							</div>
 							<textarea
 								id="tpl-offering"
+								ref={offeringRef}
 								value={offeringValue}
 								onChange={(e) => setOfferingValue(e.target.value)}
 								placeholder="e.g. We sell staff-augmentation engineering teams to mid-market SaaS. Target buyer: VP Eng / CTO."
 								rows={2}
-								className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-300"
+								className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-300 overflow-hidden"
 							/>
 						</div>
 
