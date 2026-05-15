@@ -57,7 +57,10 @@ async function extractTextWithPdftotext(buf: Buffer): Promise<string> {
 		await writeFile(inPath, buf);
 		try {
 			await runPdftotext(["-layout", "-enc", "UTF-8", inPath, outPath]);
-		} catch {
+		} catch (err) {
+			console.warn(
+				`pdftotext failed, attempting partial read: ${err instanceof Error ? err.message : String(err)}`,
+			);
 			// pdftotext may still have written partial output — fall through and
 			// try to read it; if the file doesn't exist we'll get an empty string.
 		}

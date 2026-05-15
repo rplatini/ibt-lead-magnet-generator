@@ -45,7 +45,10 @@ export async function renderPdfToImages(
 				inPath,
 				prefix,
 			]);
-		} catch {
+		} catch (err) {
+			console.warn(
+				`pdftoppm failed, collecting partial output: ${err instanceof Error ? err.message : String(err)}`,
+			);
 			// pdftoppm may still have rendered some pages before failing — fall
 			// through and collect whatever PNGs were written.
 		}

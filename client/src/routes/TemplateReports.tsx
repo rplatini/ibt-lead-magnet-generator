@@ -45,12 +45,7 @@ export default function TemplateReports() {
 						Reports · {heading}
 					</h1>
 				</div>
-				{template?.status === "draft" ? (
-					<span className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-100 text-slate-400 text-xs font-medium cursor-not-allowed">
-						<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-						Generate report
-					</span>
-				) : (
+				{template?.status === "complete" ? (
 					<Link
 						to={`/templates/${id}/generate`}
 						state={{ fromTemplateId: id }}
@@ -59,6 +54,11 @@ export default function TemplateReports() {
 						<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
 						Generate report
 					</Link>
+				) : (
+					<span className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-100 text-slate-400 text-xs font-medium cursor-not-allowed">
+						<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+						Generate report
+					</span>
 				)}
 			</div>
 			{template?.description && (

@@ -130,7 +130,7 @@ function validate(
 		try {
 			new URL(value);
 		} catch {
-			errors.push({ path, message: "expected valid URL" });
+			errors.push({ path, message: "expected valid absolute URL" });
 		}
 	} else if (def.type === "number") {
 		if (typeof value !== "number")

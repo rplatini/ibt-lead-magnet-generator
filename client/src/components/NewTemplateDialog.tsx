@@ -84,7 +84,12 @@ export default function NewTemplateDialog({
 		if (suggestions?.leadMagnetPurpose?.length) {
 			setPurposeMode("preset");
 			setSelectedPurpose(suggestions.leadMagnetPurpose[0].value);
+		} else {
+			setPurposeMode("custom");
+			setSelectedPurpose("");
 		}
+		setWritingRulesMode("preset");
+		setSelectedPreset(WRITING_RULE_PRESETS[0].value);
 	}, [open, companyName, companyUrl, aiOffering, suggestions?.leadMagnetPurpose]);
 
 	if (!open) return null;

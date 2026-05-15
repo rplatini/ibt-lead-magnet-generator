@@ -305,14 +305,32 @@ templatesRouter.post("/:id/resume-session", async (req, res) => {
 		join(dir, "brand-context.json"),
 		"utf8",
 	).catch(() => null);
-	const brandContext = brandContextRaw
-		? (JSON.parse(brandContextRaw) as {
+	const parsedBrandContext = brandContextRaw
+		? (JSON.parse(brandContextRaw) as Partial<{
 				companyUrl: string;
 				companyOffering: string;
 				leadMagnetPurpose: string;
 				writingRules: string;
-			})
-		: { companyUrl: "", companyOffering: "", leadMagnetPurpose: "", writingRules: "" };
+			}>)
+		: {};
+	const brandContext = {
+		companyUrl:
+			typeof parsedBrandContext.companyUrl === "string"
+				? parsedBrandContext.companyUrl
+				: "",
+		companyOffering:
+			typeof parsedBrandContext.companyOffering === "string"
+				? parsedBrandContext.companyOffering
+				: "",
+		leadMagnetPurpose:
+			typeof parsedBrandContext.leadMagnetPurpose === "string"
+				? parsedBrandContext.leadMagnetPurpose
+				: "",
+		writingRules:
+			typeof parsedBrandContext.writingRules === "string"
+				? parsedBrandContext.writingRules
+				: "",
+	};
 	const { sessionId } = startTemplateSession({
 		templateId: id,
 		guidelines: [
