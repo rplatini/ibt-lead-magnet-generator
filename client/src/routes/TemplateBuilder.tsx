@@ -25,7 +25,7 @@ export default function TemplateBuilder() {
 	const [hasPreview, setHasPreview] = useState<boolean>(false);
 	const [pendingUserText, setPendingUserText] = useState<string | null>(null);
 	const [composer, setComposer] = useState("");
-	const [awaiting, setAwaiting] = useState(true);
+	const [awaiting, setAwaiting] = useState(false);
 	const [creatingTemplate, setCreatingTemplate] = useState(false);
 	const [step1Open, setStep1Open] = useState(isNew);
 	const [step2Open, setStep2Open] = useState(false);

@@ -7,6 +7,10 @@ export type SlotDef =
 			maxLength?: number;
 	  }
 	| {
+			type: "url";
+			required?: boolean;
+	  }
+	| {
 			type: "number";
 			required?: boolean;
 	  }
@@ -33,6 +37,10 @@ const Slot: z.ZodType<SlotDef> = z.lazy(() =>
 			type: z.enum(["string", "html"]),
 			required: z.boolean().optional(),
 			maxLength: z.number().int().positive().optional(),
+		}),
+		z.object({
+			type: z.literal("url"),
+			required: z.boolean().optional(),
 		}),
 		z.object({
 			type: z.literal("number"),
@@ -113,6 +121,16 @@ function validate(
 		}
 		if (def.maxLength && value.length > def.maxLength) {
 			errors.push({ path, message: `> maxLength ${def.maxLength}` });
+		}
+	} else if (def.type === "url") {
+		if (typeof value !== "string") {
+			errors.push({ path, message: "expected string" });
+			return;
+		}
+		try {
+			new URL(value);
+		} catch {
+			errors.push({ path, message: "expected valid URL" });
 		}
 	} else if (def.type === "number") {
 		if (typeof value !== "number")
