@@ -21,6 +21,7 @@ export function getRun(runId: string): GenerationRun | undefined {
 export function startGenerationRun(args: {
 	templateId: string;
 	input: Record<string, unknown>;
+	feedback?: string;
 }): { runId: string } {
 	const runId = `${args.templateId}-${randomUUID().slice(0, 8)}`;
 	const run: GenerationRun = {
@@ -33,11 +34,11 @@ export function startGenerationRun(args: {
 	};
 	runs.set(runId, run);
 
-	void executeRun(run);
+	void executeRun(run, args.feedback);
 	return { runId };
 }
 
-async function executeRun(run: GenerationRun): Promise<void> {
+async function executeRun(run: GenerationRun, feedback?: string): Promise<void> {
 	const emit = (event: AgentEvent) => {
 		run.eventBuffer.push(event);
 		for (const sub of run.subscribers) {
@@ -53,6 +54,7 @@ async function executeRun(run: GenerationRun): Promise<void> {
 		for await (const event of runLeadMagnetFillerStreaming({
 			templateId: run.templateId,
 			input: run.input,
+			feedback,
 			templatesRoot: TEMPLATES_ROOT,
 			outputDir: OUTPUT_DIR,
 			runId: run.runId,

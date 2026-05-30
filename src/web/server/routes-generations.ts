@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { Router } from "express";
 import { startGenerationRun, subscribeToRun } from "./generation-runs";
@@ -28,7 +28,7 @@ async function readSidecar(runId: string): Promise<SidecarFile | null> {
 	}
 }
 
-generationsRouter.get("/", async (_req, res, next) => {
+generationsRouter.get("/", async (req, res, next) => {
 	try {
 		const items: Array<Omit<SidecarFile, "events">> = [];
 		let entries: string[] = [];
@@ -49,8 +49,13 @@ generationsRouter.get("/", async (_req, res, next) => {
 				// skip malformed sidecar
 			}
 		}
-		items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-		res.json(items);
+		const { templateId } = req.query;
+		const filtered =
+			typeof templateId === "string" && templateId
+				? items.filter((i) => i.templateId === templateId)
+				: items;
+		filtered.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+		res.json(filtered);
 	} catch (err) {
 		next(err);
 	}
@@ -61,6 +66,7 @@ generationsRouter.post("/", (req, res, next) => {
 		const body = req.body as {
 			templateId?: string;
 			input?: Record<string, unknown>;
+			feedback?: string;
 		};
 		if (!body?.templateId) {
 			res.status(400).json({ error: "templateId required" });
@@ -74,6 +80,7 @@ generationsRouter.post("/", (req, res, next) => {
 		const { runId } = startGenerationRun({
 			templateId: body.templateId,
 			input: body.input ?? {},
+			feedback: body.feedback,
 		});
 		res.status(202).json({
 			runId,
@@ -105,6 +112,27 @@ generationsRouter.get("/:runId/pdf", (req, res) => {
 	}
 	res.setHeader("Cache-Control", "no-store");
 	res.sendFile(path);
+});
+
+generationsRouter.delete("/:runId", async (req, res, next) => {
+	try {
+		const { runId } = req.params;
+		if (!/^[A-Za-z0-9_-]+$/.test(runId)) {
+			res.status(400).json({ error: "invalid runId" });
+			return;
+		}
+		const jsonPath = join(OUTPUT_DIR, `${runId}.json`);
+		if (!existsSync(jsonPath)) {
+			res.status(404).json({ error: "generation not found" });
+			return;
+		}
+		await rm(jsonPath, { force: true });
+		const pdfPath = join(OUTPUT_DIR, `${runId}.pdf`);
+		await rm(pdfPath, { force: true });
+		res.status(204).end();
+	} catch (err) {
+		next(err);
+	}
 });
 
 generationsRouter.get("/:runId/stream", (req, res) => {

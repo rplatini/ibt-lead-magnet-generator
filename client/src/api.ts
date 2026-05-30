@@ -4,6 +4,7 @@ import type {
 	GenerationDetail,
 	GenerationListItem,
 	StartGenerationResponse,
+	SummarizeResponse,
 	TemplateDetail,
 	TemplateListItem,
 } from "./types";
@@ -11,7 +12,14 @@ import type {
 async function jsonOrThrow<T>(res: Response): Promise<T> {
 	if (!res.ok) {
 		const text = await res.text().catch(() => "");
-		throw new Error(`${res.status} ${res.statusText}: ${text}`);
+		let message = `${res.status} ${res.statusText}`;
+		try {
+			const body = JSON.parse(text) as { error?: string };
+			if (body.error) message = body.error;
+		} catch {
+			if (text) message = text;
+		}
+		throw new Error(message);
 	}
 	return res.json() as Promise<T>;
 }
@@ -31,6 +39,7 @@ export const api = {
 	},
 	createTemplate: async (args: {
 		name: string;
+		url: string;
 		files: File[];
 		companyOffering?: string;
 		leadMagnetPurpose?: string;
@@ -38,6 +47,7 @@ export const api = {
 	}): Promise<CreateTemplateResponse> => {
 		const fd = new FormData();
 		fd.append("name", args.name);
+		fd.append("companyUrl", args.url);
 		for (const f of args.files) fd.append("guidelines", f);
 		if (args.companyOffering)
 			fd.append("companyOffering", args.companyOffering);
@@ -71,18 +81,44 @@ export const api = {
 		);
 		return jsonOrThrow(res);
 	},
-	listGenerations: async (): Promise<GenerationListItem[]> =>
-		jsonOrThrow(await fetch("/api/generations")),
+	listGenerations: async (templateId?: string): Promise<GenerationListItem[]> =>
+		jsonOrThrow(
+			await fetch(
+				templateId
+					? `/api/generations?templateId=${encodeURIComponent(templateId)}`
+					: "/api/generations",
+			),
+		),
 	getGeneration: async (runId: string): Promise<GenerationDetail> =>
 		jsonOrThrow(await fetch(`/api/generations/${encodeURIComponent(runId)}`)),
+	summarizeCompany: async (
+		companyName: string,
+		url: string,
+	): Promise<SummarizeResponse> => {
+		const res = await fetch("/api/summarize", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ companyName, url }),
+		});
+		return jsonOrThrow(res);
+	},
+	deleteGeneration: async (runId: string): Promise<void> => {
+		const res = await fetch(`/api/generations/${encodeURIComponent(runId)}`, {
+			method: "DELETE",
+		});
+		if (!res.ok && res.status !== 204) {
+			throw new Error(`${res.status} ${res.statusText}`);
+		}
+	},
 	startGeneration: async (
 		templateId: string,
 		input: Record<string, unknown>,
+		feedback?: string,
 	): Promise<StartGenerationResponse> => {
 		const res = await fetch("/api/generations", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ templateId, input }),
+			body: JSON.stringify({ templateId, input, feedback }),
 		});
 		return jsonOrThrow(res);
 	},

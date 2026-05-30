@@ -5,12 +5,21 @@ import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
 import { type RenderedPage, renderPdfToImages } from "./pdf-to-images";
 
+export class InvalidFileError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "InvalidFileError";
+	}
+}
+
 export interface ParsedGuidelines {
 	source: string;
 	kind: "pdf" | "txt";
 	text: string;
 	images?: RenderedPage[];
 }
+
+const PDF_MAGIC = Buffer.from("%PDF-");
 
 export async function parseGuidelines(path: string): Promise<ParsedGuidelines> {
 	const ext = extname(path).toLowerCase();
@@ -19,6 +28,13 @@ export async function parseGuidelines(path: string): Promise<ParsedGuidelines> {
 	}
 	if (ext === ".pdf") {
 		const buf = await readFile(path);
+		const header = buf.subarray(0, 5);
+		if (!header.equals(PDF_MAGIC)) {
+			throw new InvalidFileError(
+				"Uploaded file does not appear to be a valid PDF (missing %PDF- header). " +
+					"Please upload a real PDF file.",
+			);
+		}
 		// Always do both for PDFs: extract text via Poppler's pdftotext (handles
 		// CID-mapped fonts that pdf-parse silently drops), and render the first
 		// pages to PNG so the agent can see the visual identity directly. The
@@ -30,7 +46,7 @@ export async function parseGuidelines(path: string): Promise<ParsedGuidelines> {
 		]);
 		return { source: path, kind: "pdf", text, images };
 	}
-	throw new Error(`unsupported file extension: ${ext}`);
+	throw new InvalidFileError(`unsupported file extension: ${ext}`);
 }
 
 async function extractTextWithPdftotext(buf: Buffer): Promise<string> {
@@ -39,8 +55,16 @@ async function extractTextWithPdftotext(buf: Buffer): Promise<string> {
 	const outPath = join(dir, "out.txt");
 	try {
 		await writeFile(inPath, buf);
-		await runPdftotext(["-layout", "-enc", "UTF-8", inPath, outPath]);
-		return await readFile(outPath, "utf8");
+		try {
+			await runPdftotext(["-layout", "-enc", "UTF-8", inPath, outPath]);
+		} catch (err) {
+			console.warn(
+				`pdftotext failed, attempting partial read: ${err instanceof Error ? err.message : String(err)}`,
+			);
+			// pdftotext may still have written partial output — fall through and
+			// try to read it; if the file doesn't exist we'll get an empty string.
+		}
+		return await readFile(outPath, "utf8").catch(() => "");
 	} finally {
 		await rm(dir, { recursive: true, force: true });
 	}

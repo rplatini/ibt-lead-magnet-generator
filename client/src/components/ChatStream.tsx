@@ -8,6 +8,7 @@ import {
 	Wrench,
 	XCircle,
 } from "lucide-react";
+import Markdown from "react-markdown";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import type { AgentEvent } from "../types";
@@ -87,8 +88,8 @@ function UserBubble({ text }: { text: string }) {
 function AgentBubble({ text }: { text: string }) {
 	return (
 		<div className="flex justify-start">
-			<div className="max-w-[85%] rounded-2xl rounded-bl-md bg-slate-100 text-slate-800 px-3.5 py-2 text-sm whitespace-pre-wrap leading-relaxed">
-				{text}
+			<div className="max-w-[85%] rounded-2xl rounded-bl-md bg-slate-100 text-slate-800 px-3.5 py-2 text-sm leading-relaxed prose prose-sm [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:my-1">
+				<Markdown>{text}</Markdown>
 			</div>
 		</div>
 	);

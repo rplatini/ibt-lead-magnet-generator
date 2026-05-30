@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Download, RefreshCcw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { api, streamEvents } from "../api";
 import ProgressPanel from "../components/ProgressPanel";
 import SlotForm from "../components/SlotForm";
@@ -11,6 +11,13 @@ export default function Generator() {
 	const { id } = useParams();
 	const templateId = id ?? "";
 	const [searchParams] = useSearchParams();
+	const { state } = useLocation();
+	const backTo = state?.fromRunId
+		? `/history/${state.fromRunId}`
+		: state?.fromTemplateId
+			? `/templates/${state.fromTemplateId}/reports`
+			: "/";
+	const backLabel = state?.fromRunId ? "Report" : state?.fromTemplateId ? "Reports" : "Templates";
 	const prefill = searchParams.get("prefill");
 
 	const { data: template, isLoading } = useQuery({
@@ -28,11 +35,14 @@ export default function Generator() {
 		}
 	}, [prefill]);
 
+	const isRerun = prefill !== null;
+
 	const [input, setInput] = useState<Record<string, unknown>>(initialInput);
 	useEffect(() => {
 		setInput(initialInput);
 	}, [initialInput]);
 
+	const [feedback, setFeedback] = useState("");
 	const [runId, setRunId] = useState<string | null>(null);
 	const [events, setEvents] = useState<AgentEvent[]>([]);
 	const [error, setError] = useState<string | null>(null);
@@ -60,7 +70,7 @@ export default function Generator() {
 		setSubmitting(true);
 		startedAtRef.current = Date.now();
 		try {
-			const res = await api.startGeneration(templateId, input);
+			const res = await api.startGeneration(templateId, input, feedback || undefined);
 			setRunId(res.runId);
 			closeRef.current?.();
 			closeRef.current = streamEvents(
@@ -84,7 +94,7 @@ export default function Generator() {
 			setError((e as Error).message);
 			setSubmitting(false);
 		}
-	}, [templateId, input]);
+	}, [templateId, input, feedback]);
 
 	useEffect(() => {
 		return () => {
@@ -107,27 +117,16 @@ export default function Generator() {
 		<div className="max-w-4xl mx-auto px-6 py-10 space-y-6">
 			<div>
 				<Link
-					to="/"
+					to={backTo}
+					state={state?.fromRunId && state?.fromTemplateId ? { fromTemplateId: state.fromTemplateId } : undefined}
 					className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 mb-3"
 				>
 					<ArrowLeft className="w-3 h-3" aria-hidden="true" />
-					Templates
+					{backLabel}
 				</Link>
 				<h1 className="text-2xl font-semibold tracking-tight">
 					Generate from {template?.name ?? templateId}
 				</h1>
-				{template && (
-					<p className="text-sm text-slate-500 mt-1">
-						{Object.keys(template.slotSchema?.slots ?? {}).length} slot
-						{Object.keys(template.slotSchema?.slots ?? {}).length === 1
-							? ""
-							: "s"}{" "}
-						· {Object.keys(template.slotSchema?.input ?? {}).length} input field
-						{Object.keys(template.slotSchema?.input ?? {}).length === 1
-							? ""
-							: "s"}
-					</p>
-				)}
 			</div>
 
 			{isLoading && (
@@ -135,14 +134,46 @@ export default function Generator() {
 			)}
 
 			{template && template.slotSchema && (
-				<div className="rounded-xl border border-slate-200 bg-white p-5">
+				<div className="rounded-xl border border-slate-200 bg-white p-5 space-y-5">
 					<SlotForm
 						schema={template.slotSchema}
 						value={input}
 						onChange={setInput}
 						onSubmit={onGenerate}
 						submitting={submitting}
+						readonly={isRerun}
 					/>
+					{isRerun && (
+						<div className="space-y-2 border-t border-slate-100 pt-5">
+							<div>
+								<label
+									htmlFor="feedback"
+									className="block text-sm font-medium text-slate-700"
+								>
+									Feedback &amp; improvements
+								</label>
+								<p className="text-xs text-slate-500 mt-0.5">
+									Describe what you'd like to change in this report.
+								</p>
+							</div>
+							<textarea
+								id="feedback"
+								value={feedback}
+								onChange={(e) => setFeedback(e.target.value)}
+								rows={4}
+								placeholder="e.g. Make the tone more formal, focus more on ROI metrics, shorten the introduction…"
+								className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+							/>
+							<button
+								type="button"
+								onClick={onGenerate}
+								disabled={submitting}
+								className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50"
+							>
+								{submitting ? "Working…" : "Re-generate"}
+							</button>
+						</div>
+					)}
 				</div>
 			)}
 

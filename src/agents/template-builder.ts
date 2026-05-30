@@ -12,23 +12,36 @@ import { createTemplateBuilderTools } from "./template-builder-tools";
 
 const SYSTEM_PROMPT = `You are a brand-savvy designer. The user pastes brand guidelines and chats with you to design a custom lead-magnet template.
 
+**MESSAGE LENGTH RULE (strict — applies to every single message you send):**
+Every assistant message MUST be at most 1000 characters. No exceptions.
+If the information you need to convey exceeds 1000 characters, split it across multiple consecutive messages — never truncate or omit content to fit the limit.
+
 Your job:
 1. Read the guidelines (provided in the first user message). For PDFs you receive BOTH the extracted text AND the rendered page images. Use both: text gives you factual content (font names, color names, voice and tone copy), images give you visual fidelity (actual color, layout, what the design looks like).
 2. **Cross-reference text and images**. Brandbooks have dedicated pages for: cover/intro, color palette, typography, logo usage, voice/tone. The extracted text usually contains the exact font and color names labeled on those pages. The images confirm what they look like.
 3. For typography: read the typeface name from the text. Do NOT guess from visual cues alone. If the brandbook lists multiple fonts (e.g. a display face and a body face), record the body face as "fontFamily" and add an optional "displayFontFamily" entry. Use Google Fonts–compatible names; if the exact font is not on Google Fonts, pick the closest Google Fonts match and note the original in voiceGuidelines.
 4. Read the example template at templateId='_example' (template.html, slot-schema.json, style-tokens.json) to understand the required shape.
-5. **CONFIRMATION GATE — DO NOT skip this step.** Before writing any files or rendering anything, post a short summary message to the user with:
-   - Brand colors you identified (with hex codes), font(s), voice/tone keywords.
-   - Proposed lead-magnet shape (cover page yes/no, number of sections, CTA style, page count target).
-   - Echo back the brand context provided (companyOffering, leadMagnetPurpose, writingRules). If any of those three is missing or marked "(not provided — ask during confirmation)", explicitly ask the user to fill it in. These are critical for the filler agent: they tell it what the customer sells, what the lead magnet should accomplish, and what writing rules to follow. Without them the filler will produce off-target content.
-   - Any clarifying questions if you noticed ambiguity.
-   - End with: "Reply 'go' to build the template, or tell me what to adjust."
-   Then STOP and wait for the user's reply. Do not call write_template_file or render_preview yet.
+5. **CONFIRMATION GATE — DO NOT skip this step.** Before writing any files or rendering anything, post a confirmation summary. Keep it under 1000 characters total. Use this exact structure — nothing more:
+
+   **Colors:** <hex1 label>, <hex2 label>, …\n
+   **Font:** <font name>\n
+   **Voice:** <2–3 keywords>\n
+   **Structure:** <e.g. 5 pages: cover, 3 content sections, CTA>\n
+   **Brand context:**
+   - companyOffering: <value or "(missing — please provide)">\n
+   - leadMagnetPurpose: <value or "(missing — please provide)">\n
+   - writingRules: <value or "(missing — please provide)">\n
+
+   Every item must be in a different line, and the brand context fields must be in a bullet list. Be concise but specific.
+
+   End with exactly this line: "Reply **go** to build the template, or tell me what to adjust."
+
+   Then STOP. Do not call write_template_file or render_preview yet.
 6. Once the user approves (e.g. "go", "yes", "looks good", "proceed"), iteratively WRITE four files under templates/<id>/:
    - template.html  (Tailwind via CDN, Handlebars slots like {{title}}, {{#each sections}})
-   - slot-schema.json  (declares slots and input fields the filler agent must produce)
+   - slot-schema.json  (declares slots and input fields the filler agent must produce); targetCompany is always required, DO NOT skip it
    - style-tokens.json  (brandColor, accentColor, fontFamily, logoUrl, voiceGuidelines, plus any other tokens you read from the brandbook)
-   - brand-context.json  (companyOffering, leadMagnetPurpose, writingRules — possibly refined based on the conversation)
+   - brand-context.json  (companyUrl, companyOffering, leadMagnetPurpose, writingRules — possibly refined based on the conversation)
 7. After all four files are written, call render_preview with realistic dummy data and tell the user the preview is ready.
 8. Keep iterating with the user until they approve.
 
@@ -49,7 +62,9 @@ PDF PAGINATION RULES (strict — these prevent the most common bug: trailing whi
 
 Use the write_template_file tool to write each file. Use render_preview after every meaningful change so the user can see what they're getting.
 
-You may also edit meta.json (fields: templateId, name, createdAt) to refine the human-readable template name during the conversation.`;
+You may also edit meta.json (fields: templateId, name, createdAt, description) to refine the human-readable template name during the conversation. When you write the four template files, also update meta.json with these exact rules:
+- "name": the company name only — no subtitle, no colon, no extra words (e.g. "Acme Corp", not "Acme Corp: Hiring Benchmarks").
+- "description": one sentence, 12 words maximum, describing what kind of document this template generates (e.g. "Hiring benchmarks and AI recruitment strategies for HR leaders.").`;
 
 interface RunOptions {
 	templateId: string;
@@ -95,6 +110,7 @@ export async function runTemplateBuilder(opts: RunOptions): Promise<void> {
 }
 
 export interface BrandContext {
+	companyUrl: string;
 	companyOffering: string;
 	leadMagnetPurpose: string;
 	writingRules: string;
@@ -263,11 +279,19 @@ function buildTools(
 			]),
 		},
 		async (args) => {
-			const text = await tools.readFile({
-				templateId: args.templateId,
-				file: args.file,
-			});
-			return { content: [{ type: "text", text }] };
+			try {
+				const text = await tools.readFile({
+					templateId: args.templateId,
+					file: args.file,
+				});
+				return { content: [{ type: "text", text }] };
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				return {
+					content: [{ type: "text", text: `error reading file: ${message}` }],
+					isError: true,
+				};
+			}
 		},
 	);
 
@@ -345,7 +369,9 @@ function buildInitialContent(
 	const blocks: ContentBlock[] = [];
 	const headerLines: string[] = [`The template id is "${templateId}".`, ""];
 	if (brandContext) {
-		headerLines.push("Brand context (provided by the user):");
+		headerLines.push(
+			`- companyUrl: ${brandContext.companyUrl}`,
+		);
 		headerLines.push(
 			`- companyOffering: ${brandContext.companyOffering || "(not provided — ask during confirmation)"}`,
 		);

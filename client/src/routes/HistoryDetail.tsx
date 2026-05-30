@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, RefreshCcw } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { api } from "../api";
 import ProgressPanel from "../components/ProgressPanel";
 
 export default function HistoryDetail() {
 	const { runId } = useParams();
+	const { state } = useLocation();
+	const backTo = state?.fromTemplateId ? `/templates/${state.fromTemplateId}/reports` : "/history";
+	const backLabel = state?.fromTemplateId ? "Reports" : "History";
 	const { data, isLoading, error } = useQuery({
 		queryKey: ["generation", runId],
 		queryFn: () => api.getGeneration(runId ?? ""),
@@ -25,11 +28,11 @@ export default function HistoryDetail() {
 	return (
 		<div className="max-w-4xl mx-auto px-6 py-10 space-y-6">
 			<Link
-				to="/history"
+				to={backTo}
 				className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700"
 			>
 				<ArrowLeft className="w-3 h-3" aria-hidden="true" />
-				History
+				{backLabel}
 			</Link>
 
 			{isLoading && <div className="text-sm text-slate-500">Loading run…</div>}
@@ -54,10 +57,11 @@ export default function HistoryDetail() {
 						{prefill && (
 							<Link
 								to={`/templates/${data.templateId}/generate?prefill=${encodeURIComponent(prefill)}`}
+								state={{ fromRunId: runId, fromTemplateId: data.templateId }}
 								className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-100"
 							>
 								<RefreshCcw className="w-3.5 h-3.5" aria-hidden="true" />
-								Re-run
+								Re-generate
 							</Link>
 						)}
 					</div>

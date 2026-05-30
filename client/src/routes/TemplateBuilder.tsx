@@ -7,9 +7,10 @@ import ChatStream, {
 	type TimelineItem,
 	timelineFromEvents,
 } from "../components/ChatStream";
+import CompanyStepDialog from "../components/CompanyStepDialog";
 import NewTemplateDialog from "../components/NewTemplateDialog";
 import PdfViewer from "../components/PdfViewer";
-import type { AgentEvent } from "../types";
+import type { AgentEvent, SummarizeResponse } from "../types";
 
 export default function TemplateBuilder() {
 	const { id } = useParams();
@@ -24,9 +25,15 @@ export default function TemplateBuilder() {
 	const [hasPreview, setHasPreview] = useState<boolean>(false);
 	const [pendingUserText, setPendingUserText] = useState<string | null>(null);
 	const [composer, setComposer] = useState("");
-	const [awaiting, setAwaiting] = useState(true);
+	const [awaiting, setAwaiting] = useState(false);
 	const [creatingTemplate, setCreatingTemplate] = useState(false);
-	const [dialogOpen, setDialogOpen] = useState(isNew);
+	const [step1Open, setStep1Open] = useState(isNew);
+	const [step2Open, setStep2Open] = useState(false);
+	const [companyData, setCompanyData] = useState<{
+		name: string;
+		url: string;
+		suggestions?: SummarizeResponse;
+	} | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const closeRef = useRef<(() => void) | null>(null);
 
@@ -90,9 +97,27 @@ export default function TemplateBuilder() {
 		};
 	}, [templateId, sessionId]);
 
+	const handleDialogClose = useCallback(() => {
+		if (!templateId) navigate("/", { replace: true });
+		else {
+			setStep1Open(false);
+			setStep2Open(false);
+		}
+	}, [templateId, navigate]);
+
+	const onStep1Next = useCallback(
+		(data: { name: string; url: string; suggestions?: SummarizeResponse }) => {
+			setCompanyData(data);
+			setStep1Open(false);
+			setStep2Open(true);
+		},
+		[],
+	);
+
 	const onCreateTemplate = useCallback(
 		async (args: {
 			name: string;
+			url: string;
 			files: File[];
 			companyOffering: string;
 			leadMagnetPurpose: string;
@@ -104,7 +129,7 @@ export default function TemplateBuilder() {
 				const res = await api.createTemplate(args);
 				setTemplateId(res.templateId);
 				setSessionId(res.sessionId);
-				setDialogOpen(false);
+				setStep2Open(false);
 				queryClient.invalidateQueries({ queryKey: ["templates"] });
 				navigate(`/templates/${res.templateId}/edit`, { replace: true });
 			} catch (e) {
@@ -225,13 +250,19 @@ export default function TemplateBuilder() {
 				</div>
 			</div>
 
+			<CompanyStepDialog
+				open={step1Open}
+				onClose={handleDialogClose}
+				onNext={onStep1Next}
+			/>
 			<NewTemplateDialog
-				open={dialogOpen}
+				open={step2Open}
+				companyName={companyData?.name ?? ""}
+				companyUrl={companyData?.url ?? ""}
+				suggestions={companyData?.suggestions}
 				submitting={creatingTemplate}
-				onClose={() => {
-					if (!templateId) navigate("/", { replace: true });
-					else setDialogOpen(false);
-				}}
+				onClose={handleDialogClose}
+				onBack={() => { setStep2Open(false); setStep1Open(true); }}
 				onSubmit={onCreateTemplate}
 			/>
 		</div>

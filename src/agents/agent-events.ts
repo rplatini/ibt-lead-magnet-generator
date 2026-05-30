@@ -7,7 +7,7 @@ export type AgentEvent =
 	| { type: "done"; runId?: string; pdfUrl?: string }
 	| { type: "error"; message: string };
 
-const MAX_TEXT_LEN = 2000;
+const MAX_TEXT_LEN = 1500;
 
 export function truncateForLog(text: string): string {
 	if (text.length <= MAX_TEXT_LEN) return text;

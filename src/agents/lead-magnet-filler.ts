@@ -23,6 +23,7 @@ Workflow:
 interface RunOptions {
 	templateId: string;
 	input: Record<string, unknown>;
+	feedback?: string;
 	templatesRoot: string;
 	outputDir: string;
 	runId: string;
@@ -127,8 +128,12 @@ export async function* runLeadMagnetFillerStreaming(
 		? buildFramingBlock(customerName, targetCompany, brandContext)
 		: `Voice / style guidelines from the customer:\n${tokens.voiceGuidelines ?? ""}`;
 
+	const feedbackBlock = opts.feedback?.trim()
+		? `\n\nUser feedback / improvements for this re-run:\n${opts.feedback.trim()}\n\nIncorporate this feedback when generating the report.`
+		: "";
+
 	const session = query({
-		prompt: `Slot schema for templateId=${opts.templateId}:\n\n${slotSchemaText}\n\nCaller input:\n${JSON.stringify(opts.input)}\n\nGenerate the lead magnet.`,
+		prompt: `Slot schema for templateId=${opts.templateId}:\n\n${slotSchemaText}\n\nCaller input:\n${JSON.stringify(opts.input)}\n\nGenerate the lead magnet.${feedbackBlock}`,
 		options: {
 			model: "claude-haiku-4-5",
 			systemPrompt: SYSTEM_PROMPT_PREFIX + framingBlock,

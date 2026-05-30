@@ -29,6 +29,7 @@
 	},
 	"input": {
 		"targetCompany": { "type": "string", "required": true },
+		"targetCompanyUrl": { "type": "url", "required": true, "description": "Website URL of the target company (e.g. https://acme.com)" },
 		"contactName": { "type": "string", "required": false }
 	}
 }

@@ -1,10 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
-import { readdir, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { Router } from "express";
 import multer from "multer";
-import { parseGuidelines } from "../../parsing/brand-guidelines";
+import { InvalidFileError, parseGuidelines } from "../../parsing/brand-guidelines";
 import { TEMPLATES_ROOT } from "./paths";
 import {
 	getSession,
@@ -26,6 +26,7 @@ interface TemplateMeta {
 	templateId?: string;
 	name?: string;
 	createdAt?: string;
+	description?: string;
 }
 
 async function readMeta(templateId: string): Promise<TemplateMeta> {
@@ -90,11 +91,16 @@ templatesRouter.get("/", async (_req, res, next) => {
 						createdAt = new Date(0).toISOString();
 					}
 				}
+				const status = existsSync(join(TEMPLATES_ROOT, id, "template.html"))
+					? "complete"
+					: "draft";
 				return {
 					id,
 					name: meta.name ?? id,
 					createdAt,
 					slotKeys,
+					status,
+					description: meta.description ?? null,
 				};
 			}),
 		);
@@ -124,6 +130,18 @@ templatesRouter.post(
 				res.status(400).json({ error: "name required" });
 				return;
 			}
+			const companyUrl = (req.body?.companyUrl as string | undefined)?.trim();
+			if (!companyUrl) {
+				res.status(400).json({ error: "companyUrl required" });
+				return;
+			}
+			try {
+				const u = new URL(companyUrl);
+				if (u.protocol !== "https:") throw new Error();
+			} catch {
+				res.status(400).json({ error: "companyUrl must be a valid https URL" });
+				return;
+			}
 			const files = (req.files as Express.Multer.File[] | undefined) ?? [];
 			if (files.length === 0) {
 				res
@@ -135,28 +153,36 @@ templatesRouter.post(
 			const suffix = randomBytes(3).toString("hex");
 			const templateId = `${baseSlug}-${suffix}`;
 
-			const guidelines = await Promise.all(
-				files.map(async (f) => {
-					const ext = extname(f.originalname).toLowerCase();
-					if (ext !== ".pdf" && ext !== ".txt") {
-						throw new Error(`unsupported file extension: ${ext}`);
-					}
-					const tmpPath = join(
-						TEMPLATES_ROOT,
-						`.upload-${randomBytes(4).toString("hex")}${ext}`,
-					);
-					const { writeFile, unlink, mkdir } = await import("node:fs/promises");
-					await mkdir(TEMPLATES_ROOT, { recursive: true });
-					await writeFile(tmpPath, f.buffer);
-					try {
-						return await parseGuidelines(tmpPath);
-					} finally {
-						await unlink(tmpPath).catch(() => {});
-					}
-				}),
-			);
+			let guidelines: Awaited<ReturnType<typeof parseGuidelines>>[];
+			try {
+				guidelines = await Promise.all(
+					files.map(async (f) => {
+						const ext = extname(f.originalname).toLowerCase();
+						if (ext !== ".pdf" && ext !== ".txt") {
+							throw new InvalidFileError(`unsupported file extension: ${ext}`);
+						}
+						const tmpPath = join(
+							TEMPLATES_ROOT,
+							`.upload-${randomBytes(4).toString("hex")}${ext}`,
+						);
+						await mkdir(TEMPLATES_ROOT, { recursive: true });
+						await writeFile(tmpPath, f.buffer);
+						try {
+							return await parseGuidelines(tmpPath);
+						} finally {
+							await unlink(tmpPath).catch(() => {});
+						}
+					}),
+				);
+			} catch (err) {
+				if (err instanceof InvalidFileError) {
+					console.error("[templates] invalid brand guidelines file:", err.message);
+					res.status(400).json({ error: err.message });
+					return;
+				}
+				throw err;
+			}
 
-			const { mkdir, writeFile } = await import("node:fs/promises");
 			const dir = join(TEMPLATES_ROOT, templateId);
 			await mkdir(dir, { recursive: true });
 			await writeFile(
@@ -173,6 +199,7 @@ templatesRouter.post(
 			);
 
 			const brandContext = {
+				companyUrl,
 				companyOffering: (
 					(req.body?.companyOffering as string | undefined) ?? ""
 				).trim(),
@@ -222,9 +249,11 @@ templatesRouter.get("/:id", async (req, res, next) => {
 			id,
 			name: meta.name ?? id,
 			createdAt: meta.createdAt ?? null,
+			description: meta.description ?? null,
 			hasPreview: existsSync(join(dir, "preview.pdf")),
 			slotSchema: slotSchemaRaw ? JSON.parse(slotSchemaRaw) : null,
 			styleTokens: styleTokensRaw ? JSON.parse(styleTokensRaw) : null,
+			status: existsSync(join(dir, "template.html")) ? "complete" : "draft",
 		});
 	} catch (err) {
 		next(err);
@@ -276,13 +305,32 @@ templatesRouter.post("/:id/resume-session", async (req, res) => {
 		join(dir, "brand-context.json"),
 		"utf8",
 	).catch(() => null);
-	const brandContext = brandContextRaw
-		? (JSON.parse(brandContextRaw) as {
+	const parsedBrandContext = brandContextRaw
+		? (JSON.parse(brandContextRaw) as Partial<{
+				companyUrl: string;
 				companyOffering: string;
 				leadMagnetPurpose: string;
 				writingRules: string;
-			})
-		: { companyOffering: "", leadMagnetPurpose: "", writingRules: "" };
+			}>)
+		: {};
+	const brandContext = {
+		companyUrl:
+			typeof parsedBrandContext.companyUrl === "string"
+				? parsedBrandContext.companyUrl
+				: "",
+		companyOffering:
+			typeof parsedBrandContext.companyOffering === "string"
+				? parsedBrandContext.companyOffering
+				: "",
+		leadMagnetPurpose:
+			typeof parsedBrandContext.leadMagnetPurpose === "string"
+				? parsedBrandContext.leadMagnetPurpose
+				: "",
+		writingRules:
+			typeof parsedBrandContext.writingRules === "string"
+				? parsedBrandContext.writingRules
+				: "",
+	};
 	const { sessionId } = startTemplateSession({
 		templateId: id,
 		guidelines: [

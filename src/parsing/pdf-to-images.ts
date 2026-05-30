@@ -35,15 +35,23 @@ export async function renderPdfToImages(
 	const prefix = join(dir, "page");
 	try {
 		await writeFile(inPath, buf);
-		await runPdftoppm([
-			"-png",
-			"-r",
-			String(dpi),
-			"-l",
-			String(maxPages),
-			inPath,
-			prefix,
-		]);
+		try {
+			await runPdftoppm([
+				"-png",
+				"-r",
+				String(dpi),
+				"-l",
+				String(maxPages),
+				inPath,
+				prefix,
+			]);
+		} catch (err) {
+			console.warn(
+				`pdftoppm failed, collecting partial output: ${err instanceof Error ? err.message : String(err)}`,
+			);
+			// pdftoppm may still have rendered some pages before failing — fall
+			// through and collect whatever PNGs were written.
+		}
 		const files = (await readdir(dir))
 			.filter((f) => f.startsWith("page-") && f.endsWith(".png"))
 			.sort();

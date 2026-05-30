@@ -12,10 +12,12 @@ export interface TemplateListItem {
 	name: string;
 	createdAt: string;
 	slotKeys: string[];
+	status: "complete" | "draft";
+	description: string | null;
 }
 
 export interface SlotDef {
-	type: "string" | "html" | "number" | "boolean" | "object" | "array";
+	type: "string" | "html" | "number" | "boolean" | "object" | "array" | "url";
 	required?: boolean;
 	maxLength?: number;
 	hint?: string;
@@ -36,9 +38,11 @@ export interface TemplateDetail {
 	id: string;
 	name: string;
 	createdAt: string | null;
+	description: string | null;
 	hasPreview: boolean;
 	slotSchema: SlotSchema | null;
 	styleTokens: Record<string, unknown> | null;
+	status: "complete" | "draft";
 }
 
 export interface GenerationListItem {
@@ -63,4 +67,14 @@ export interface CreateTemplateResponse {
 export interface StartGenerationResponse {
 	runId: string;
 	streamUrl: string;
+}
+
+export interface Preset {
+	label: string;
+	value: string;
+}
+
+export interface SummarizeResponse {
+	companyOffering: Preset[];
+	leadMagnetPurpose: Preset[];
 }
